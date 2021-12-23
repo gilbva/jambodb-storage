@@ -59,9 +59,27 @@ public class BTreeTest {
             intToStr.put(i, intToStr.get(i));
         }
 
-        var it = strToInt.query("a", "z");
-        while (it.hasNext()) {
-            System.out.println(it.next().value());
+        var bTreeIt = strToInt.query("a", "z");
+        int count = 0;
+        while (bTreeIt.hasNext()) {
+            bTreeIt.next();
+            count++;
+        }
+        bTreeIt = strToInt.query("a", "z");
+        var map = strToIntTree.subMap("a", true, "z", true);
+
+        Assertions.assertEquals(map.size(), count);
+
+        var treeIt = map.entrySet().iterator();
+        while (bTreeIt.hasNext()) {
+            Assertions.assertTrue(treeIt.hasNext());
+
+            var expected = treeIt.next();
+            var current = bTreeIt.next();
+
+            System.out.println(expected.getKey() + " - " + current.key());
+            Assertions.assertEquals(expected.getKey(), current.key());
+            Assertions.assertEquals(expected.getValue(), current.value());
         }
     }
 }
