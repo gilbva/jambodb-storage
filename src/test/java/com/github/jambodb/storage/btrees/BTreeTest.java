@@ -1,23 +1,22 @@
 package com.github.jambodb.storage.btrees;
 
+import java.io.IOException;
+import java.util.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
-
-import java.io.IOException;
-import java.util.*;
 
 public class BTreeTest {
     @TestFactory
     public Collection<DynamicTest> testBTree() throws IOException {
         List<DynamicTest> lst = new ArrayList<>();
-        for(int md = 3; md < 100; md+=3) {
+        for (int md = 3; md < 100; md += 3) {
             final int maxDegree = md;
-            for(int i = 0; i < 20; i++) {
+            for (int i = 0; i < 20; i++) {
                 final int size = i;
                 lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
             }
-            for(int i = 1000; i < 10000; i+=1000) {
+            for (int i = 1000; i < 10000; i += 1000) {
                 final int size = i;
                 lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
             }
@@ -31,7 +30,7 @@ public class BTreeTest {
 
         var strToInt = new BTree<>(new MockPager<String, Integer>(md));
         var intToStr = new BTree<>(new MockPager<Integer, String>(md));
-        for(int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             var str = UUID.randomUUID().toString();
 
             Assertions.assertNull(intToStr.get(i));

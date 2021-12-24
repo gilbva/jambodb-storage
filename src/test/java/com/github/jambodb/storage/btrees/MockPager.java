@@ -1,18 +1,14 @@
 package com.github.jambodb.storage.btrees;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MockPager<K, V> implements Pager<BTreePage<K, V>> {
 
+    private final Map<Integer, MockBTreePage<K, V>> map;
+    private final int maxDegree;
     private int root;
-
-    private Map<Integer, MockBTreePage<K, V>> map;
-
     private int lastPage;
-
-    private int maxDegree;
 
     public MockPager(int maxDegree) {
         this.maxDegree = maxDegree;
@@ -21,22 +17,22 @@ public class MockPager<K, V> implements Pager<BTreePage<K, V>> {
     }
 
     @Override
-    public int root() throws IOException {
+    public int root() {
         return root;
     }
 
     @Override
-    public void root(int id) throws IOException {
+    public void root(int id) {
         root = id;
     }
 
     @Override
-    public MockBTreePage<K, V> page(int id) throws IOException {
+    public MockBTreePage<K, V> page(int id) {
         return map.get(id);
     }
 
     @Override
-    public MockBTreePage<K, V> create(boolean leaf) throws IOException {
+    public MockBTreePage<K, V> create(boolean leaf) {
         lastPage++;
         var page = new MockBTreePage<K, V>(lastPage, maxDegree, leaf);
         map.put(lastPage, page);
@@ -44,12 +40,12 @@ public class MockPager<K, V> implements Pager<BTreePage<K, V>> {
     }
 
     @Override
-    public void remove(int id) throws IOException {
+    public void remove(int id) {
         map.remove(id);
     }
 
     @Override
-    public void fsync() throws IOException {
+    public void fsync() {
 
     }
 }
