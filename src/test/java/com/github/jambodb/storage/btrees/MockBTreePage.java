@@ -1,28 +1,22 @@
 package com.github.jambodb.storage.btrees;
 
 public class MockBTreePage<K, V> implements BTreePage<K, V> {
-
-    private int id;
-
-    private Object[] keys;
-
-    private Object[] values;
-
-    private int[] children;
-
-    private int maxDegree;
-
+    private final int id;
+    private final int maxDegree;
+    private final K[] keys;
+    private final V[] values;
+    private final int[] children;
     private int size;
 
-    private boolean leaf;
+    private final boolean leaf;
 
     public MockBTreePage(int id, int maxDegree, boolean leaf) {
         this.id = id;
         this.maxDegree = maxDegree;
         this.leaf = leaf;
-        keys = new Object[maxDegree+1];
-        values = new Object[maxDegree+1];
-        children = new int[maxDegree+2];
+        keys = (K[]) new Object[maxDegree + 1];
+        values = (V[]) new Object[maxDegree + 1];
+        children = new int[maxDegree + 2];
     }
 
     @Override
@@ -62,7 +56,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public K key(int index) {
-        return (K)keys[index];
+        return keys[index];
     }
 
     @Override
@@ -72,7 +66,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public V value(int index) {
-        return (V)values[index];
+        return values[index];
     }
 
     @Override

@@ -6,16 +6,11 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 public class FileBlockStorage implements BlockStorage {
-
     private static final int HEADER_SIZE = 8;
-
-    private int blockSize;
-
-    private int blockCount;
-
     private final RandomAccessFile raf;
-
     private final FileChannel channel;
+    private int blockSize;
+    private int blockCount;
 
     public FileBlockStorage(int blockSize, RandomAccessFile raf) throws IOException {
         this.blockSize = blockSize;
@@ -50,7 +45,7 @@ public class FileBlockStorage implements BlockStorage {
 
     @Override
     public synchronized void read(int index, ByteBuffer data) throws IOException {
-        if(index >= blockCount) {
+        if (index >= blockCount) {
             throw new IndexOutOfBoundsException("The block does not exists");
         }
         long pos = findPosition(index);
@@ -61,10 +56,10 @@ public class FileBlockStorage implements BlockStorage {
 
     @Override
     public synchronized void write(int index, ByteBuffer data) throws IOException {
-        if(index >= blockCount) {
+        if (index >= blockCount) {
             throw new IndexOutOfBoundsException("The block does not exists;");
         }
-        if(data.remaining() > blockSize) {
+        if (data.remaining() > blockSize) {
             throw new IOException("Block overflow");
         }
         long pos = findPosition(index);
@@ -74,7 +69,7 @@ public class FileBlockStorage implements BlockStorage {
     }
 
     private long findPosition(int index) {
-        return HEADER_SIZE + ((long)index * blockSize);
+        return HEADER_SIZE + ((long) index * blockSize);
     }
 
     private void writeHeader() throws IOException {

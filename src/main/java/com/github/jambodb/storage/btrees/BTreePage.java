@@ -15,6 +15,10 @@ public interface BTreePage<K, V> {
 
     boolean canBorrow();
 
+    default boolean canNotBorrow() {
+        return !canBorrow();
+    }
+
     K key(int index);
 
     void key(int index, K key);
