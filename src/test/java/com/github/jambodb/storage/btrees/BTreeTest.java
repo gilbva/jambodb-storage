@@ -6,10 +6,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class BTreeTest {
+    public static final Logger LOG = Logger.getLogger(BTreeTest.class.getName());
+
     @TestFactory
     public Collection<DynamicTest> testBTree() throws IOException {
         List<DynamicTest> lst = new ArrayList<>();
@@ -61,20 +64,33 @@ public class BTreeTest {
             itsTree.put(i, intToStr.get(i));
         }
 
-        assertEqualTrees(stiTree, strToInt.query(null, null));
-        assertEqualTrees(stiTree.subMap("a", true, "z", true), strToInt.query("a", "z"));
-        assertEqualTrees(stiTree.subMap("0", true, "9", true), strToInt.query("0", "9"));
+        assertEqualTrees(itsTree, intToStr, null, null);
+        assertEqualTrees(itsTree.subMap(0, true, 5, true), intToStr, 0, 5);
+        assertEqualTrees(itsTree.subMap(6, true, 9, true), intToStr, 6, 9);
+
+        assertEqualTrees(stiTree, strToInt, null, null);
+        assertEqualTrees(stiTree.subMap("a", true, "z", true), strToInt, "a", "z");
+        assertEqualTrees(stiTree.subMap("0", true, "9", true), strToInt, "0", "9");
     }
 
-    private void assertEqualTrees(NavigableMap<String, Integer> tree, Iterator<BTreeEntry<String, Integer>> query) {
+    private <K extends Comparable<K>, V> void assertEqualTrees(NavigableMap<K, V> tree, BTree<K, V> btree, K from, K to) throws IOException {
         var expected = tree
                 .keySet()
                 .toArray();
-        var current = toList(query)
+        var current = toList(btree.query(from, to))
                 .stream()
                 .map(BTreeEntry::key)
                 .collect(Collectors.toList())
                 .toArray();
+
+        if(expected.length != current.length) {
+            LOG.log(Level.INFO,"{0} -> {1}", new Object[] { Arrays.toString(expected), Arrays.toString(current) });
+            current = toList(btree.query(from, to))
+                    .stream()
+                    .map(BTreeEntry::key)
+                    .collect(Collectors.toList())
+                    .toArray();
+        }
         Assertions.assertArrayEquals(expected, current, Arrays.toString(expected) + " => " + Arrays.toString(current));
     }
 
