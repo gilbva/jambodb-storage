@@ -2,7 +2,6 @@ package com.github.jambodb.storage.btrees;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import java.io.IOException;
 import java.util.*;
@@ -10,8 +9,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class BTreeTest {
-    public static final Logger LOG = Logger.getLogger(BTreeTest.class.getName());
+public class BTreeFunctionalTest {
+    public static final Logger LOG = Logger.getLogger(BTreeFunctionalTest.class.getName());
 
     @TestFactory
     public Collection<DynamicTest> testBTree() throws IOException {
@@ -20,17 +19,17 @@ public class BTreeTest {
             final int maxDegree = md;
             for(int i = 0; i < 20; i++) {
                 final int size = i;
-                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTreeOperations(maxDegree, size)));
+                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
             }
             for(int i = 1000; i < 10000; i+=1000) {
                 final int size = i;
-                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTreeOperations(maxDegree, size)));
+                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
             }
         }
         return lst;
     }
 
-    private void testBTreeOperations(int md, int size) throws IOException {
+    private void testBTree(int md, int size) throws IOException {
         var stiTree = new TreeMap<String, Integer>();
         var itsTree = new TreeMap<Integer, String>();
 
@@ -92,41 +91,6 @@ public class BTreeTest {
                     .toArray();
         }
         Assertions.assertArrayEquals(expected, current, Arrays.toString(expected) + " => " + Arrays.toString(current));
-    }
-
-    @Test
-    public void testBTreeRange() throws IOException {
-        var btree = new BTree<>(new MockPager<String, Integer>(6));
-
-        btree.put("7", 1);
-        btree.put("b", 2);
-
-        var query = btree.query("a", "z");
-        Assertions.assertEquals(1, count(query));
-
-        query = btree.query("a", "z");
-        Assertions.assertEquals("b", query.next().key());
-        Assertions.assertEquals(0, count(query));
-    }
-
-    @Test
-    public void testBTreeRangeComplex() throws IOException {
-        var btree = new BTree<>(new MockPager<String, Integer>(6));
-
-        btree.put("0a", 1);
-        btree.put("9a", 2);
-        btree.put("aa", 3);
-        btree.put("zz", 4);
-
-        var tree = new TreeMap<String, Integer>();
-        tree.put("0a", 1);
-        tree.put("9a", 2);
-        tree.put("aa", 3);
-        tree.put("zz", 4);
-
-        var subMap = tree.subMap("a", true, "z", true);
-        var query = btree.query("a", "z");
-        Assertions.assertEquals(subMap.size(), count(query));
     }
 
     private int count(Iterator<?> query) {

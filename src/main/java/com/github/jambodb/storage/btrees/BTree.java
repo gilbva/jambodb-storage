@@ -14,7 +14,7 @@ import java.util.*;
  * @param <K> The type for the key.
  * @param <V> The type for the value.
  */
-public class BTree<K extends Comparable<K>, V> {
+public final class BTree<K extends Comparable<K>, V> {
 
     /**
      * This class holds a reference to a particular point in the tree,
@@ -23,7 +23,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param <K> The type for the key.
      * @param <V> The type for the value.
      */
-    private static class Node<K, V> implements BTreeEntry<K, V> {
+    static class Node<K, V> implements BTreeEntry<K, V> {
         BTreePage<K, V> page;
         int index;
 
@@ -56,7 +56,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param <K> The type for the key.
      * @param <V> The type for the value.
      */
-    private static class Result<K, V> extends Node<K, V> {
+    static class Result<K, V> extends Node<K, V> {
         boolean found;
 
         public Result(BTreePage<K, V> page, int index, boolean found) {
@@ -68,12 +68,12 @@ public class BTree<K extends Comparable<K>, V> {
     /**
      * This is the reference to the underlying page storage.
      */
-    private Pager<BTreePage<K, V>> pager;
+    Pager<BTreePage<K, V>> pager;
 
     /**
      * A reference to the root page of the tree.
      */
-    private BTreePage<K, V> root;
+    BTreePage<K, V> root;
 
     /**
      * The constructor builds a BTree instance for the given page storage.
@@ -201,7 +201,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private Node<K, V> first(BTreePage<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
+    Node<K, V> first(BTreePage<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         while(!current.isLeaf()) {
             if(ancestors != null) {
                 ancestors.addFirst(new Node<>(current, 0));
@@ -222,7 +222,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private Node<K, V> last(BTreePage<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
+    Node<K, V> last(BTreePage<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         while(!current.isLeaf()) {
             if(ancestors != null) {
                 ancestors.addFirst(new Node<>(current, 0));
@@ -243,7 +243,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private Node<K, V> next(Node<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
+    Node<K, V> next(Node<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         if(current.page.isLeaf()) {
             if(current.index+1 < current.page.size()) {
                 return new Node<>(current.page, current.index+1);
@@ -273,7 +273,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private Node<K, V> prev(Node<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
+    Node<K, V> prev(Node<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         if(current.page.isLeaf()) {
             if(current.index-1 >= 0) {
                 return new Node<>(current.page, current.index-1);
@@ -304,7 +304,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private Result<K, V> lookup(K key, Deque<Node<K, V>> ancestors) throws IOException {
+    Result<K, V> lookup(K key, Deque<Node<K, V>> ancestors) throws IOException {
         var current = root;
         while (!current.isLeaf()) {
             var result = search(current, key);
@@ -321,7 +321,7 @@ public class BTree<K extends Comparable<K>, V> {
         return search(current, key);
     }
 
-    private Node<K, V> lookupFirst(K key, Deque<Node<K, V>> ancestors) throws IOException {
+    Node<K, V> lookupFirst(K key, Deque<Node<K, V>> ancestors) throws IOException {
         var result = lookup(key, ancestors);
 
         if(!result.found) {
@@ -348,7 +348,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private Result<K, V> search(BTreePage<K,V> page, K key) throws IOException {
+    Result<K, V> search(BTreePage<K,V> page, K key) throws IOException {
         int p = 0;
         int r = page.size() - 1;
 
@@ -379,7 +379,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param ancestors
      * @throws IOException
      */
-    private void split(BTreePage<K, V> source, Deque<Node<K, V>> ancestors) throws IOException {
+    void split(BTreePage<K, V> source, Deque<Node<K, V>> ancestors) throws IOException {
         Node<K, V> parent;
         if(ancestors.isEmpty()) {
             parent = grow();
@@ -407,7 +407,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param ancestors
      * @throws IOException
      */
-    private void fill(BTreePage<K, V> target, Deque<Node<K, V>> ancestors) throws IOException {
+    void fill(BTreePage<K, V> target, Deque<Node<K, V>> ancestors) throws IOException {
         if(ancestors.isEmpty()) {
             shrink();
             return;
@@ -434,7 +434,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private Node<K, V> grow() throws IOException {
+    Node<K, V> grow() throws IOException {
         var newRoot = pager.create(false);
         newRoot.child(0, root.id());
         root = newRoot;
@@ -447,7 +447,7 @@ public class BTree<K extends Comparable<K>, V> {
      *
      * @throws IOException
      */
-    private void shrink() throws IOException {
+    void shrink() throws IOException {
         if(root.size() == 0 && !root.isLeaf()) {
             pager.remove(root.id());
             root = getChildPage(root, 0);
@@ -463,7 +463,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private boolean borrowLeft(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
+    boolean borrowLeft(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
         if(parent.index <= 0) {
             return false;
         }
@@ -485,7 +485,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private boolean borrowRight(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
+    boolean borrowRight(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
         if(parent.index >= parent.page.size()) {
             return false;
         }
@@ -507,7 +507,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private boolean mergeLeft(Node<K, V> parent, BTreePage<K, V> source) throws IOException {
+    boolean mergeLeft(Node<K, V> parent, BTreePage<K, V> source) throws IOException {
         if(parent.index <= 0) {
             return false;
         }
@@ -526,7 +526,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private boolean mergeRight(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
+    boolean mergeRight(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
         if(parent.index >= parent.page.size()) {
             return false;
         }
@@ -545,7 +545,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param target
      * @throws IOException
      */
-    private void merge(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) throws IOException {
+    void merge(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) throws IOException {
         target.size(target.size()+1);
         target.key(target.size()-1 , parent.page.key(parent.index));
         target.value(target.size()-1 , parent.page.value(parent.index));
@@ -564,7 +564,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param index
      * @param target
      */
-    private void move(BTreePage<K, V> source, int index, BTreePage<K, V> target) {
+    void move(BTreePage<K, V> source, int index, BTreePage<K, V> target) {
         int prevSize = target.size();
         int moveSize = source.size() - index;
         target.size(target.size() + moveSize);
@@ -586,7 +586,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param source
      * @param parent
      */
-    private void promoteLast(BTreePage<K, V> source, Node<K, V> parent) {
+    void promoteLast(BTreePage<K, V> source, Node<K, V> parent) {
         insertPlace(parent.page, parent.index);
         parent.page.key(parent.index, source.key(source.size()-1));
         parent.page.value(parent.index, source.value(source.size()-1));
@@ -601,7 +601,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param source
      * @param target
      */
-    private void rotateLeft(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) {
+    void rotateLeft(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) {
         target.size(target.size()+1);
         target.key(target.size()-1, parent.page.key(parent.index));
         target.value(target.size()-1, parent.page.value(parent.index));
@@ -622,7 +622,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param source
      * @param target
      */
-    private void rotateRight(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) {
+    void rotateRight(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) {
         insertPlace(target, 0);
         target.key(0, parent.page.key(parent.index));
         target.value(0, parent.page.value(parent.index));
@@ -640,7 +640,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param page
      * @param index
      */
-    private void insertPlace(BTreePage<K, V> page, int index) {
+    void insertPlace(BTreePage<K, V> page, int index) {
         page.size(page.size()+1);
         for(int i = page.size(); i > index; i--) {
             if(i < page.size()) {
@@ -660,7 +660,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @param page
      * @param index
      */
-    private void deletePlace(BTreePage<K, V> page, int index) {
+    void deletePlace(BTreePage<K, V> page, int index) {
         for(int i = index; i < page.size(); i++) {
             if(i < page.size() - 1) {
                 page.key(i, page.key(i+1));
@@ -681,7 +681,7 @@ public class BTree<K extends Comparable<K>, V> {
      * @return
      * @throws IOException
      */
-    private BTreePage<K,V> getChildPage(BTreePage<K,V> page, int index) throws IOException {
+    BTreePage<K,V> getChildPage(BTreePage<K,V> page, int index) throws IOException {
         return pager.page(page.child(index));
     }
 }
