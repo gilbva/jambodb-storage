@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class BTreeTest {
@@ -27,12 +28,13 @@ public class BTreeTest {
     }
 
     private void testBTreeOperations(int md, int size) throws IOException {
-        var strToIntTree = new TreeMap<String, Integer>();
+        var stiTree = new TreeMap<String, Integer>();
+        var itsTree = new TreeMap<Integer, String>();
 
         var strToInt = new BTree<>(new MockPager<String, Integer>(md));
         var intToStr = new BTree<>(new MockPager<Integer, String>(md));
         for(int i = 0; i < size; i++) {
-            var str = UUID.randomUUID().toString();
+            var str = UUID.randomUUID().toString().substring(0, 8);
 
             Assertions.assertNull(intToStr.get(i));
             Assertions.assertNull(strToInt.get(str));
@@ -55,19 +57,24 @@ public class BTreeTest {
             Assertions.assertEquals(str, intToStr.get(i));
             Assertions.assertEquals(i, strToInt.get(str));
 
-            strToIntTree.put(str, strToInt.get(str));
-            intToStr.put(i, intToStr.get(i));
+            stiTree.put(str, strToInt.get(str));
+            itsTree.put(i, intToStr.get(i));
         }
 
-        var expected = strToIntTree.subMap("a", true, "z", true)
-                                            .keySet()
-                                            .toArray();
-        var current = toList(strToInt.query("a", "z"))
-                                            .stream()
-                                            .map(BTreeEntry::key)
-                                            .collect(Collectors.toList())
-                                            .toArray();
+        assertEqualTrees(stiTree, strToInt.query(null, null));
+        assertEqualTrees(stiTree.subMap("a", true, "z", true), strToInt.query("a", "z"));
+        assertEqualTrees(stiTree.subMap("0", true, "9", true), strToInt.query("0", "9"));
+    }
 
+    private void assertEqualTrees(NavigableMap<String, Integer> tree, Iterator<BTreeEntry<String, Integer>> query) {
+        var expected = tree
+                .keySet()
+                .toArray();
+        var current = toList(query)
+                .stream()
+                .map(BTreeEntry::key)
+                .collect(Collectors.toList())
+                .toArray();
         Assertions.assertArrayEquals(expected, current, Arrays.toString(expected) + " => " + Arrays.toString(current));
     }
 

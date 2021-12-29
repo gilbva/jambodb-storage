@@ -41,6 +41,11 @@ public class BTree<K extends Comparable<K>, V> {
         public V value() {
             return page.value(index);
         }
+
+        @Override
+        public String toString() {
+            return String.format("%s=%s", key(), value());
+        }
     }
 
     /**
@@ -176,7 +181,7 @@ public class BTree<K extends Comparable<K>, V> {
                     current = BTree.this.next(current, ancestors);
                     if(current != null) {
                         var key = current.key();
-                        if (key.compareTo(to) > 0) {
+                        if (to != null && key.compareTo(to) > 0) {
                             current = null;
                         }
                     }
@@ -307,10 +312,10 @@ public class BTree<K extends Comparable<K>, V> {
                 return result;
             }
 
-            if(ancestors != null) {
+            current = getChildPage(result.page, result.index);
+            if(ancestors != null && !current.isLeaf()) {
                 ancestors.addFirst(result);
             }
-            current = getChildPage(result.page, result.index);
         }
 
         return search(current, key);
@@ -319,7 +324,16 @@ public class BTree<K extends Comparable<K>, V> {
     private Node<K, V> lookupFirst(K key, Deque<Node<K, V>> ancestors) throws IOException {
         var result = lookup(key, ancestors);
 
-        if(!result.found && result.key() == null) {
+        if(!result.found) {
+            var prev = prev(result, ancestors);
+            if(prev != null && prev.key().compareTo(key) >= 0) {
+                return prev;
+            }
+
+            if(result.key() != null && result.key().compareTo(key) >= 0) {
+                return result;
+            }
+
             return next(result, ancestors);
         }
 

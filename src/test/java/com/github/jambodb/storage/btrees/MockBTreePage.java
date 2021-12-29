@@ -89,4 +89,9 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
     public void child(int index, int child) {
         children[index] = child;
     }
+
+    @Override
+    public String toString() {
+        return "page:" + id;
+    }
 }
