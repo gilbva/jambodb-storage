@@ -2,10 +2,11 @@ package com.github.jambodb.storage.btrees;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class BTreeTest {
     @TestFactory
@@ -15,19 +16,18 @@ public class BTreeTest {
             final int maxDegree = md;
             for(int i = 0; i < 20; i++) {
                 final int size = i;
-                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
+                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTreeOperations(maxDegree, size)));
             }
             for(int i = 1000; i < 10000; i+=1000) {
                 final int size = i;
-                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
+                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTreeOperations(maxDegree, size)));
             }
         }
         return lst;
     }
 
-    private void testBTree(int md, int size) throws IOException {
+    private void testBTreeOperations(int md, int size) throws IOException {
         var strToIntTree = new TreeMap<String, Integer>();
-        var intToStrTree = new TreeMap<String, Integer>();
 
         var strToInt = new BTree<>(new MockPager<String, Integer>(md));
         var intToStr = new BTree<>(new MockPager<Integer, String>(md));
@@ -59,27 +59,70 @@ public class BTreeTest {
             intToStr.put(i, intToStr.get(i));
         }
 
-        var bTreeIt = strToInt.query("a", "z");
+        var expected = strToIntTree.subMap("a", true, "z", true)
+                                            .keySet()
+                                            .toArray();
+        var current = toList(strToInt.query("a", "z"))
+                                            .stream()
+                                            .map(BTreeEntry::key)
+                                            .collect(Collectors.toList())
+                                            .toArray();
+
+        Assertions.assertArrayEquals(expected, current, Arrays.toString(expected) + " => " + Arrays.toString(current));
+    }
+
+    @Test
+    public void testBTreeRange() throws IOException {
+        var btree = new BTree<>(new MockPager<String, Integer>(6));
+
+        btree.put("7", 1);
+        btree.put("b", 2);
+
+        var query = btree.query("a", "z");
+        Assertions.assertEquals(1, count(query));
+
+        query = btree.query("a", "z");
+        Assertions.assertEquals("b", query.next().key());
+        Assertions.assertEquals(0, count(query));
+    }
+
+    @Test
+    public void testBTreeRangeComplex() throws IOException {
+        var btree = new BTree<>(new MockPager<String, Integer>(6));
+
+        btree.put("0a", 1);
+        btree.put("9a", 2);
+        btree.put("aa", 3);
+        btree.put("zz", 4);
+
+        var tree = new TreeMap<String, Integer>();
+        tree.put("0a", 1);
+        tree.put("9a", 2);
+        tree.put("aa", 3);
+        tree.put("zz", 4);
+
+        var subMap = tree.subMap("a", true, "z", true);
+        var query = btree.query("a", "z");
+        Assertions.assertEquals(subMap.size(), count(query));
+    }
+
+    private int count(Iterator<?> query) {
         int count = 0;
-        while (bTreeIt.hasNext()) {
-            bTreeIt.next();
+        while (query.hasNext()) {
+            query.next();
             count++;
         }
-        bTreeIt = strToInt.query("a", "z");
-        var map = strToIntTree.subMap("a", true, "z", true);
+        return count;
+    }
 
-        Assertions.assertEquals(map.size(), count);
-
-        var treeIt = map.entrySet().iterator();
-        while (bTreeIt.hasNext()) {
-            Assertions.assertTrue(treeIt.hasNext());
-
-            var expected = treeIt.next();
-            var current = bTreeIt.next();
-
-            System.out.println(expected.getKey() + " - " + current.key());
-            Assertions.assertEquals(expected.getKey(), current.key());
-            Assertions.assertEquals(expected.getValue(), current.value());
+    private <T extends BTreeEntry> List<T> toList(Iterator<T> query) {
+        List<T> lst = new ArrayList<>();
+        while (query.hasNext()) {
+            var value = query.next();
+            Assertions.assertNotNull(value);
+            Assertions.assertNotNull(value.key());
+            lst.add(value);
         }
+        return lst;
     }
 }

@@ -159,7 +159,7 @@ public class BTree<K extends Comparable<K>, V> {
         }
 
         final Deque<Node<K, V>> ancestors = new LinkedList<>();
-        final Node<K, V> fromNode = from == null ? first(root, ancestors) : lookup(from, ancestors);
+        final Node<K, V> fromNode = from == null ? first(root, ancestors) : lookupFirst(from, ancestors);
 
         return new Iterator<>() {
             Node<K, V> current = fromNode;
@@ -314,6 +314,16 @@ public class BTree<K extends Comparable<K>, V> {
         }
 
         return search(current, key);
+    }
+
+    private Node<K, V> lookupFirst(K key, Deque<Node<K, V>> ancestors) throws IOException {
+        var result = lookup(key, ancestors);
+
+        if(!result.found && result.key() == null) {
+            return next(result, ancestors);
+        }
+
+        return result;
     }
 
     /**
