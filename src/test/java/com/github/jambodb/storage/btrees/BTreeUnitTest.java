@@ -4,10 +4,59 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 
 public class BTreeUnitTest {
     private Random random = new Random();
+
+    @Test
+    public void testMove() throws IOException {
+        for (int i = 1; i <= 100; i++) {
+            MockPager<String, Integer> pager = new MockPager<>(i);
+            BTree<String, Integer> btree = new BTree<>(pager);
+
+            var source = fillWithDummyData(pager.create(false), i);
+            var target = fillWithDummyData(pager.create(false), 0);
+
+            var sourceExpectedKeys = new ArrayList<>(Arrays.asList(source.getKeys()));
+            var sourceExpectedValues = new ArrayList<>(Arrays.asList(source.getValues()));
+            var sourceExpectedChildren = new ArrayList<>(Arrays.asList(source.getChildren()));
+
+            var targetExpectedKeys = new ArrayList<>(Arrays.asList(target.getKeys()));
+            var targetExpectedValues = new ArrayList<>(Arrays.asList(target.getValues()));
+            var targetExpectedChildren = new ArrayList<>(Arrays.asList(target.getChildren()));
+
+            while (source.size() > 0) {
+                target.size(0);
+                int index = random.nextInt(source.size());
+
+                move(sourceExpectedKeys, targetExpectedKeys, index);
+                move(sourceExpectedValues, targetExpectedValues, index);
+                moveChildren(sourceExpectedChildren, targetExpectedChildren, index);
+
+                btree.move(source, index, target);
+                assertArrayEquals(sourceExpectedKeys.toArray(), source.getKeys());
+                assertArrayEquals(sourceExpectedValues.toArray(), source.getValues());
+                assertArrayEquals(sourceExpectedChildren.toArray(), source.getChildren());
+                assertArrayEquals(targetExpectedKeys.toArray(), target.getKeys());
+                assertArrayEquals(targetExpectedValues.toArray(), target.getValues());
+                assertArrayEquals(targetExpectedChildren.toArray(), target.getChildren());
+            }
+        }
+    }
+
+    private void moveChildren(ArrayList<Object> source, ArrayList<Object> target, int index) {
+        target.clear();
+        target.addAll(source.subList(index, source.size()));
+        source.removeAll(target.subList(1, target.size()));
+    }
+
+    private void move(ArrayList<Object> source, ArrayList<Object> target, int index) {
+        target.clear();
+        target.addAll(source.subList(index, source.size()));
+        source.removeAll(target);
+    }
 
     @Test
     public void testPromoteLast() throws IOException {
@@ -101,23 +150,28 @@ public class BTreeUnitTest {
             var expectedChildren = new ArrayList<>(i);
 
             var nonLeafPage = pager.create(false);
-            nonLeafPage.child(i, i);
+            nonLeafPage.child(0, i * 10);
+            expectedChildren.add(0, i * 10);
 
-            while (nonLeafPage.size() < i) {
+            while (expectedKeys.size() < i) {
                 int index = random.nextInt(nonLeafPage.size()+1);
+
+                String key = String.valueOf((char)('a' + index));
+                int value = index + 1;
+                int child = index * 10;
+
+                expectedKeys.add(index, key);
+                expectedValues.add(index, value);
+                expectedChildren.add(index, child);
+
                 btree.insertPlace(nonLeafPage, index);
-
-                nonLeafPage.key(index, String.valueOf((char)('a' + index)));
-                nonLeafPage.value(index, index);
-                nonLeafPage.child(index, index);
-
-                expectedKeys.add(index, nonLeafPage.key(index));
-                expectedValues.add(index, nonLeafPage.value(index));
-                expectedChildren.add(index, nonLeafPage.child(index));
+                nonLeafPage.key(index, key);
+                nonLeafPage.value(index, value);
+                nonLeafPage.child(index, child);
 
                 assertArrayEquals(expectedKeys.toArray(), nonLeafPage.getKeys());
                 assertArrayEquals(expectedValues.toArray(), nonLeafPage.getValues());
-                assertArrayEquals(expectedChildren.toArray(), nonLeafPage.getValues());
+                assertArrayEquals(expectedChildren.toArray(), nonLeafPage.getChildren());
             }
         }
     }
@@ -183,5 +237,16 @@ public class BTreeUnitTest {
         assertThrows(IllegalArgumentException.class, () -> btree.getChildPage(leafPage, 0), "getChildPage should throw IllegalArgumentException if called on leaf page");
         assertThrows(IndexOutOfBoundsException.class, () -> btree.getChildPage(nonLeafPage, 10), "getChildPage should throw IndexOutOfBoundsException if called with and invalid index");
         assertThrows(IndexOutOfBoundsException.class, () -> btree.getChildPage(nonLeafPage, -1), "getChildPage should throw IndexOutOfBoundsException if called with and invalid index");
+    }
+
+    private MockBTreePage<String, Integer> fillWithDummyData(MockBTreePage<String, Integer> page, int size) {
+        page.size(size);
+        for(int i = 0; i < size; i++) {
+            page.key(i, "k" + i);
+            page.value(i, i * 100);
+            page.child(i, i * 10);
+        }
+        page.child(size, size * 10);
+        return page;
     }
 }
