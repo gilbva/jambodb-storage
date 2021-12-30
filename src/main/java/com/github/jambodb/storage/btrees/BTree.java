@@ -637,8 +637,8 @@ public final class BTree<K extends Comparable<K>, V> {
      * This method inserts an empty spot at the given index by moving
      * every node one step to the right.
      *
-     * @param page
-     * @param index
+     * @param page The page to insert the place into.
+     * @param index The index at which the empty spot will be inserted.
      */
     void insertPlace(BTreePage<K, V> page, int index) {
         page.size(page.size()+1);
@@ -655,12 +655,16 @@ public final class BTree<K extends Comparable<K>, V> {
 
     /**
      * This method will delete the node at the given index by moving all
-     * the nodes to its right one step to the left.
+     * the values from its right one step to the left.
      *
-     * @param page
-     * @param index
+     * @param page The page to delete the node from.
+     * @param index The index to be deleted from the given page.
      */
     void deletePlace(BTreePage<K, V> page, int index) {
+        if(index < 0 || index >= page.size()) {
+            throw new IllegalArgumentException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
+        }
+
         for(int i = index; i < page.size(); i++) {
             if(i < page.size() - 1) {
                 page.key(i, page.key(i+1));
@@ -671,17 +675,27 @@ public final class BTree<K extends Comparable<K>, V> {
             }
         }
         page.size(page.size()-1);
+        page.clean();
     }
 
     /**
-     * Gets the child page referenced by the specified node.
+     * Gets the child page referenced by the specified node, this method will invoke the underlying pager.page()
+     * method to load the child page.
      *
-     * @param page
-     * @param index
-     * @return
-     * @throws IOException
+     * @param page The non-leaf page to get the child id from.
+     * @param index The valid index withing the bounds of page that holds the id of the child page.
+     * @return The page object referenced by the parent page at the given index.
+     * @throws IOException thrown by the Pager interface if any I/O errors occur loading the page.
+     * @throws IllegalArgumentException if the page parameter is not a leaf page.
+     * @throws IndexOutOfBoundsException if the page parameter is not a leaf page.
      */
     BTreePage<K,V> getChildPage(BTreePage<K,V> page, int index) throws IOException {
+        if(page.isLeaf()) {
+            throw new IllegalArgumentException("getChildPage called on leaf page.");
+        }
+        if(index < 0 || index > page.size()) {
+            throw new IllegalArgumentException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
+        }
         return pager.page(page.child(index));
     }
 }

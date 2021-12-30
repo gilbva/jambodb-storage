@@ -7,6 +7,8 @@ public interface BTreePage<K, V> {
 
     void size(int size);
 
+    void clean();
+
     boolean isLeaf();
 
     boolean isFull();

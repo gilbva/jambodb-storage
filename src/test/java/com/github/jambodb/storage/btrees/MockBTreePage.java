@@ -1,5 +1,7 @@
 package com.github.jambodb.storage.btrees;
 
+import java.util.Arrays;
+
 public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     private int id;
@@ -23,6 +25,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
         keys = new Object[maxDegree+1];
         values = new Object[maxDegree+1];
         children = new int[maxDegree+2];
+        Arrays.fill(children, -1);
     }
 
     @Override
@@ -37,7 +40,21 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void size(int size) {
+        if(size < 0) {
+            throw new IllegalArgumentException("invalid size " + size);
+        }
         this.size = size;
+    }
+
+    @Override
+    public void clean() {
+        for(int i = size + 1; i < children.length; i++) {
+            children[i] = -1;
+        }
+        for(int i = size; i < keys.length; i++) {
+            keys[i] = null;
+            values[i] = null;
+        }
     }
 
     @Override
@@ -93,5 +110,29 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
     @Override
     public String toString() {
         return "page:" + id;
+    }
+
+    public Object[] getKeys() {
+        return getCleared(keys);
+    }
+
+    public Object[] getValues() {
+        return getCleared(values);
+    }
+
+    public Object[] getChildren() {
+        Object[] result = new Object[size+1];
+        for(int i = 0; i < result.length; i++) {
+            result[i] = children[i];
+        }
+        return result;
+    }
+
+    private Object[] getCleared(Object[] array) {
+        Object[] result = new Object[size];
+        for(int i = 0; i < result.length; i++) {
+            result[i] = array[i];
+        }
+        return result;
     }
 }
