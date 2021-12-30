@@ -44,17 +44,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
             throw new IllegalArgumentException("invalid size " + size);
         }
         this.size = size;
-    }
-
-    @Override
-    public void clean() {
-        for(int i = size + 1; i < children.length; i++) {
-            children[i] = -1;
-        }
-        for(int i = size; i < keys.length; i++) {
-            keys[i] = null;
-            values[i] = null;
-        }
+        clean();
     }
 
     @Override
@@ -134,5 +124,15 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
             result[i] = array[i];
         }
         return result;
+    }
+
+    private void clean() {
+        for(int i = size + 1; i < children.length; i++) {
+            children[i] = -1;
+        }
+        for(int i = size; i < keys.length; i++) {
+            keys[i] = null;
+            values[i] = null;
+        }
     }
 }
