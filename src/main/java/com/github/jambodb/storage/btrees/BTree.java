@@ -662,7 +662,7 @@ public final class BTree<K extends Comparable<K>, V> {
      */
     void deletePlace(BTreePage<K, V> page, int index) {
         if(index < 0 || index >= page.size()) {
-            throw new IllegalArgumentException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
+            throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
         }
 
         for(int i = index; i < page.size(); i++) {
@@ -694,7 +694,7 @@ public final class BTree<K extends Comparable<K>, V> {
             throw new IllegalArgumentException("getChildPage called on leaf page.");
         }
         if(index < 0 || index > page.size()) {
-            throw new IllegalArgumentException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
+            throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
         }
         return pager.page(page.child(index));
     }
