@@ -28,14 +28,13 @@ public class BTreeUnitTest {
             var targetExpectedChildren = new ArrayList<>(Arrays.asList(target.getChildren()));
 
             while (source.size() > 0) {
-                target.size(0);
                 int index = random.nextInt(source.size());
 
                 move(sourceExpectedKeys, targetExpectedKeys, index);
                 move(sourceExpectedValues, targetExpectedValues, index);
                 moveChildren(sourceExpectedChildren, targetExpectedChildren, index);
 
-                btree.move(source, index, target);
+                btree.move(source, target, index);
                 assertArrayEquals(sourceExpectedKeys.toArray(), source.getKeys());
                 assertArrayEquals(sourceExpectedValues.toArray(), source.getValues());
                 assertArrayEquals(sourceExpectedChildren.toArray(), source.getChildren());
@@ -47,15 +46,18 @@ public class BTreeUnitTest {
     }
 
     private void moveChildren(ArrayList<Object> source, ArrayList<Object> target, int index) {
-        target.clear();
+        target.remove(target.size() - 1);
         target.addAll(source.subList(index, source.size()));
-        source.removeAll(target.subList(1, target.size()));
+        while (index < source.size() - 1) {
+            source.remove(source.size() - 1);
+        }
     }
 
     private void move(ArrayList<Object> source, ArrayList<Object> target, int index) {
-        target.clear();
         target.addAll(source.subList(index, source.size()));
-        source.removeAll(target);
+        while (index < source.size()) {
+            source.remove(source.size() - 1);
+        }
     }
 
     @Test

@@ -390,7 +390,7 @@ public final class BTree<K extends Comparable<K>, V> {
 
         int mid = source.size() / 2;
         var target = pager.create(source.isLeaf());
-        move(source, mid + 1, target);
+        move(source, target, mid + 1);
         promoteLast(source, parent);
         parent.page.child(parent.index, source.id());
         parent.page.child(parent.index+1, target.id());
@@ -553,35 +553,33 @@ public final class BTree<K extends Comparable<K>, V> {
         deletePlace(parent.page, parent.index);
         parent.page.child(parent.index, target.id());
 
-        move(source, 0, target);
+        move(source, target, 0);
         pager.remove(source.id());
     }
 
     /**
-     * Move the given node and all the following from the source page to the empty target page.
-     * This method will also delete all the values moved from the source page except for the
-     * child element at the given index.
+     * Move the given node and all the following from the source page to the end of the target page.
+     * the elements will be removed from the source page except for the child of the element at the given index.
      *
-     * @param source The source page holding the elements to move.
-     * @param index A valid index for the source page.
-     * @param target The empty page to move the elements to.
+     * @param source the page holding the elements to move, this should be a non-empty page.
+     * @param target the target page to move the elements to, this page can be empty.
+     *               if the page is not empty the nodes will be put at the end of this page.
+     * @param index a valid index at the source page signaling the first element that will be moved.
      */
-    void move(BTreePage<K, V> source, int index, BTreePage<K, V> target) {
+    void move(BTreePage<K, V> source, BTreePage<K, V> target, int index) {
         if(index < 0 || index > source.size()) {
             throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, source.id(), source.size()));
         }
-        if(target.size() != 0) {
-            throw new IllegalArgumentException(String.format("the page %d is not empty", target.id()));
-        }
+        int prevSize = target.size();
         int moveSize = source.size() - index;
         target.size(target.size() + moveSize);
         for(int i = 0; i <= moveSize; i++) {
             if(i < moveSize) {
-                target.key(i, source.key(index + i));
-                target.value(i, source.value(index + i));
+                target.key(prevSize + i, source.key(index + i));
+                target.value(prevSize + i, source.value(index + i));
             }
             if(!target.isLeaf()) {
-                target.child(i, source.child(index + i));
+                target.child(prevSize + i, source.child(index + i));
             }
         }
         source.size(source.size() - moveSize);
@@ -715,6 +713,8 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param index The valid index withing the bounds of page that holds the id of the child page.
      * @return The page object referenced by the parent page at the given index.
      * @throws IOException thrown by the Pager interface if any I/O errors occur loading the page.
+     * @throws IllegalArgumentException if the page parameter is not a leaf page.
+     * @throws IndexOutOfBoundsException if the page parameter is not a leaf page.
      */
     BTreePage<K,V> getChildPage(BTreePage<K,V> page, int index) throws IOException {
         if(page.isLeaf()) {
