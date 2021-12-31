@@ -13,43 +13,53 @@ public class BTreeUnitTest {
     @Test
     public void testMerge() throws IOException {
         for (int i = 1; i <= 100; i++) {
-            MockPager<String, Integer> pager = new MockPager<>(i * 2);
-            BTree<String, Integer> btree = new BTree<>(pager);
-
-            var parent = fillWithDummyData(pager.create(false), i);
-            var source = fillWithDummyData(pager.create(false), i);
-            var target = fillWithDummyData(pager.create(false), random.nextInt(i) + 1);
-
-            int index = random.nextInt(parent.size());
-            parent.child(index, target.id());
-            parent.child(index+1, source.id());
-
-            var targetExpectedKeys = new ArrayList<>(Arrays.asList(target.getKeys()));
-            var targetExpectedValues = new ArrayList<>(Arrays.asList(target.getValues()));
-            var targetExpectedChildren = new ArrayList<>(Arrays.asList(target.getChildren()));
-
-            targetExpectedKeys.add(parent.key(index));
-            targetExpectedValues.add(parent.value(index));
-            targetExpectedKeys.addAll(Arrays.asList(source.getKeys()));
-            targetExpectedValues.addAll(Arrays.asList(source.getValues()));
-            targetExpectedChildren.addAll(Arrays.asList(source.getChildren()));
-
-            var parentExpectedKeys = new ArrayList<>(Arrays.asList(parent.getKeys()));
-            var parentExpectedValues = new ArrayList<>(Arrays.asList(parent.getValues()));
-            var parentExpectedChildren = new ArrayList<>(Arrays.asList(parent.getChildren()));
-
-            parentExpectedKeys.remove(index);
-            parentExpectedValues.remove(index);
-            parentExpectedChildren.remove(index+1);
-
-            btree.merge(new BTree.Node<>(parent, index), source, target);
-            assertArrayEquals(parentExpectedKeys.toArray(), parent.getKeys());
-            assertArrayEquals(parentExpectedValues.toArray(), parent.getValues());
-            assertArrayEquals(parentExpectedChildren.toArray(), parent.getChildren());
-            assertArrayEquals(targetExpectedKeys.toArray(), target.getKeys());
-            assertArrayEquals(targetExpectedValues.toArray(), target.getValues());
-            assertArrayEquals(targetExpectedChildren.toArray(), target.getChildren());
+            testMerge(i, true);
+            testMerge(i, false);
         }
+    }
+
+    public void testMerge(int size, boolean mergeRight) throws IOException {
+        MockPager<String, Integer> pager = new MockPager<>(size * 2);
+        BTree<String, Integer> btree = new BTree<>(pager);
+
+        var parent = fillWithDummyData(pager.create(false), size);
+        var rightPage = fillWithDummyData(pager.create(false), size);
+        var leftPage = fillWithDummyData(pager.create(false), random.nextInt(size) + 1);
+
+        int index = random.nextInt(parent.size());
+        parent.child(index, leftPage.id());
+        parent.child(index+1, rightPage.id());
+
+        var targetExpectedKeys = new ArrayList<>(Arrays.asList(leftPage.getKeys()));
+        var targetExpectedValues = new ArrayList<>(Arrays.asList(leftPage.getValues()));
+        var targetExpectedChildren = new ArrayList<>(Arrays.asList(leftPage.getChildren()));
+
+        targetExpectedKeys.add(parent.key(index));
+        targetExpectedValues.add(parent.value(index));
+        targetExpectedKeys.addAll(Arrays.asList(rightPage.getKeys()));
+        targetExpectedValues.addAll(Arrays.asList(rightPage.getValues()));
+        targetExpectedChildren.addAll(Arrays.asList(rightPage.getChildren()));
+
+        var parentExpectedKeys = new ArrayList<>(Arrays.asList(parent.getKeys()));
+        var parentExpectedValues = new ArrayList<>(Arrays.asList(parent.getValues()));
+        var parentExpectedChildren = new ArrayList<>(Arrays.asList(parent.getChildren()));
+
+        parentExpectedKeys.remove(index);
+        parentExpectedValues.remove(index);
+        parentExpectedChildren.remove(index+1);
+
+        if(mergeRight) {
+            btree.mergeRight(new BTree.Node<>(parent, index), leftPage);
+        }
+        else {
+            btree.mergeLeft(new BTree.Node<>(parent, index+1), rightPage);
+        }
+        assertArrayEquals(parentExpectedKeys.toArray(), parent.getKeys());
+        assertArrayEquals(parentExpectedValues.toArray(), parent.getValues());
+        assertArrayEquals(parentExpectedChildren.toArray(), parent.getChildren());
+        assertArrayEquals(targetExpectedKeys.toArray(), leftPage.getKeys());
+        assertArrayEquals(targetExpectedValues.toArray(), leftPage.getValues());
+        assertArrayEquals(targetExpectedChildren.toArray(), leftPage.getChildren());
     }
 
     @Test

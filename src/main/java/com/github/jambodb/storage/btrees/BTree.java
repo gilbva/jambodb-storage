@@ -42,6 +42,10 @@ public final class BTree<K extends Comparable<K>, V> {
             return page.value(index);
         }
 
+        public int child() {
+            return page.child(index);
+        }
+
         @Override
         public String toString() {
             return String.format("%s=%s", key(), value());
@@ -445,7 +449,7 @@ public final class BTree<K extends Comparable<K>, V> {
     /**
      * Shrinks the tree by removing the root page.
      *
-     * @throws IOException
+     * @throws IOException if any I/O error occurs while removing the root page or setting the new root page in the pager.
      */
     void shrink() throws IOException {
         if(root.size() == 0 && !root.isLeaf()) {
@@ -456,18 +460,20 @@ public final class BTree<K extends Comparable<K>, V> {
     }
 
     /**
-     * Try to borrow the last node of the page to the left of the target page.
+     * Tries to borrow the last element from the left page by making a right rotation to the target page.
      *
-     * @param parent
-     * @param target
-     * @return
-     * @throws IOException
+     * @param parent the parent node for the right rotation, must be the parent of the target page.
+     * @param target the target page for the right rotation, the one that will receive the parent element.
+     * @return true if the borrow was possible or false if the source page cannot be borrowed from or the
+     *         parent node is invalid.
+     * @throws IOException if any I/O exception occurs reading the source page from the pager.
      */
     boolean borrowLeft(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
         if(parent.index <= 0) {
             return false;
         }
 
+        parent = new Node<>(parent.page, parent.index-1);
         var source = getChildPage(parent.page, parent.index);
         if(!source.canBorrow()) {
             return false;
@@ -478,12 +484,12 @@ public final class BTree<K extends Comparable<K>, V> {
     }
 
     /**
-     * Try to borrow the first node of the page to the right of the target page.
+     * Tries to borrow the first element from the right page by making a left rotation to the target page.
      *
-     * @param parent
-     * @param target
-     * @return
-     * @throws IOException
+     * @param parent the parent node for the left rotation, must be the parent of the target page.
+     * @param target the target page for the left rotation, the one that will receive the parent element.
+     * @return true if the borrow was possible or false if the source page cannot be borrowed from or the parent node is invalid.
+     * @throws IOException if any I/O exception occurs reading the source page from the pager.
      */
     boolean borrowRight(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
         if(parent.index >= parent.page.size()) {
@@ -502,17 +508,18 @@ public final class BTree<K extends Comparable<K>, V> {
     /**
      * Merges the target page with the page to the left
      *
-     * @param parent
-     * @param source
-     * @return
-     * @throws IOException
+     * @param parent the parent node of the given source page.
+     * @param source the child page of the given parent which will be deleted
+     *               after the merge and its elements moved to the target page.
+     * @return true if the parent node could be merged, or false if the parent node has an invalid position.
+     * @throws IOException if any I/O error occurs deleting the source page.
      */
     boolean mergeLeft(Node<K, V> parent, BTreePage<K, V> source) throws IOException {
         if(parent.index <= 0) {
             return false;
         }
 
-        parent.index--;
+        parent = new Node<>(parent.page, parent.index-1);
         var target = getChildPage(parent.page, parent.index);
         merge(parent, source, target);
         return true;
@@ -521,10 +528,10 @@ public final class BTree<K extends Comparable<K>, V> {
     /**
      * Merges the target page with the page to the right.
      *
-     * @param parent
-     * @param target
-     * @return
-     * @throws IOException
+     * @param parent the parent node of the given target page.
+     * @param target the child page of the given parent node that will receive the elements from the source page.
+     * @return true if the parent node could be merged, or false if the parent node has an invalid position.
+     * @throws IOException if any I/O error occurs deleting the source page.
      */
     boolean mergeRight(Node<K, V> parent, BTreePage<K, V> target) throws IOException {
         if(parent.index >= parent.page.size()) {
