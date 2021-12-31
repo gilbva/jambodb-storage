@@ -538,12 +538,12 @@ public final class BTree<K extends Comparable<K>, V> {
 
     /**
      * This method merges two pages by moving the parent node along with all the nodes of the source page
-     * to the target page.
+     * to the target page. the method also deletes the source page from the pager.
      *
-     * @param parent
-     * @param source
-     * @param target
-     * @throws IOException
+     * @param parent the parent node of the target page.
+     * @param source the page to the right of the parent node.
+     * @param target the page to the left of the parent node.
+     * @throws IOException if any I/O error occurs deleting the source page.
      */
     void merge(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) throws IOException {
         target.size(target.size()+1);
