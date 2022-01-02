@@ -17,7 +17,7 @@ public class BTreeFunctionalTest {
         List<DynamicTest> lst = new ArrayList<>();
         for(int md = 3; md < 100; md+=3) {
             final int maxDegree = md;
-            for(int i = 0; i < 20; i++) {
+            for(int i = 4; i < 20; i++) {
                 final int size = i;
                 lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
             }
@@ -30,13 +30,13 @@ public class BTreeFunctionalTest {
     }
 
     private void testBTree(int md, int size) throws IOException {
-        var stiTree = new TreeMap<String, Integer>();
-        var itsTree = new TreeMap<Integer, String>();
+        var expectedStiTree = new TreeMap<String, Integer>();
+        var expectedItsTree = new TreeMap<Integer, String>();
 
         var strToInt = new BTree<>(new MockPager<String, Integer>(md));
         var intToStr = new BTree<>(new MockPager<Integer, String>(md));
         for(int i = 0; i < size; i++) {
-            var str = UUID.randomUUID().toString().substring(0, 8);
+            var str = "k" + i;//UUID.randomUUID().toString().substring(0, 8);
 
             Assertions.assertNull(intToStr.get(i));
             Assertions.assertNull(strToInt.get(str));
@@ -59,17 +59,17 @@ public class BTreeFunctionalTest {
             Assertions.assertEquals(str, intToStr.get(i));
             Assertions.assertEquals(i, strToInt.get(str));
 
-            stiTree.put(str, strToInt.get(str));
-            itsTree.put(i, intToStr.get(i));
+            expectedStiTree.put(str, strToInt.get(str));
+            expectedItsTree.put(i, intToStr.get(i));
         }
 
-        assertEqualTrees(itsTree, intToStr, null, null);
-        assertEqualTrees(itsTree.subMap(0, true, 5, true), intToStr, 0, 5);
-        assertEqualTrees(itsTree.subMap(6, true, 9, true), intToStr, 6, 9);
+        assertEqualTrees(expectedItsTree, intToStr, null, null);
+        assertEqualTrees(expectedItsTree.subMap(0, true, 5, true), intToStr, 0, 5);
+        assertEqualTrees(expectedItsTree.subMap(6, true, 9, true), intToStr, 6, 9);
 
-        assertEqualTrees(stiTree, strToInt, null, null);
-        assertEqualTrees(stiTree.subMap("a", true, "z", true), strToInt, "a", "z");
-        assertEqualTrees(stiTree.subMap("0", true, "9", true), strToInt, "0", "9");
+        assertEqualTrees(expectedStiTree, strToInt, null, null);
+        assertEqualTrees(expectedStiTree.subMap("a", true, "z", true), strToInt, "a", "z");
+        assertEqualTrees(expectedStiTree.subMap("0", true, "9", true), strToInt, "0", "9");
     }
 
     private <K extends Comparable<K>, V> void assertEqualTrees(NavigableMap<K, V> tree, BTree<K, V> btree, K from, K to) throws IOException {

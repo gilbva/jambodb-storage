@@ -168,7 +168,11 @@ public final class BTree<K extends Comparable<K>, V> {
         }
 
         final Deque<Node<K, V>> ancestors = new LinkedList<>();
-        final Node<K, V> fromNode = from == null ? first(root, ancestors) : lookupFirst(from, ancestors);
+        Node<K, V> first = from == null ? first(root, ancestors) : lookupFirst(from, ancestors);
+        if (to != null && first != null && first.key().compareTo(to) > 0) {
+            first = null;
+        }
+        final Node<K, V> fromNode = first;
 
         return new Iterator<>() {
             Node<K, V> current = fromNode;
@@ -198,7 +202,7 @@ public final class BTree<K extends Comparable<K>, V> {
     }
 
     /**
-     * Gets the first node of the sub-tree rooted at the given current node.
+     * Gets the first node of the subtree rooted at the given current node.
      *
      * @param current
      * @param ancestors
@@ -316,25 +320,29 @@ public final class BTree<K extends Comparable<K>, V> {
                 return result;
             }
 
-            current = getChildPage(result.page, result.index);
-            if(ancestors != null && !current.isLeaf()) {
+            if(ancestors != null) {
                 ancestors.addFirst(result);
             }
+            current = getChildPage(result.page, result.index);
         }
 
         return search(current, key);
     }
 
-    Node<K, V> lookupFirst(K key, Deque<Node<K, V>> ancestors) throws IOException {
-        var result = lookup(key, ancestors);
+    Node<K, V> lookupFirst(K from, Deque<Node<K, V>> ancestors) throws IOException {
+        var result = lookup(from, ancestors);
 
         if(!result.found) {
+            var prevAncestors = new LinkedList<>(ancestors);
             var prev = prev(result, ancestors);
-            if(prev != null && prev.key().compareTo(key) >= 0) {
+            if(prev != null && prev.key().compareTo(from) >= 0) {
                 return prev;
             }
 
-            if(result.key() != null && result.key().compareTo(key) >= 0) {
+            ancestors.clear();
+            ancestors.addAll(prevAncestors);
+
+            if(result.key() != null && result.key().compareTo(from) >= 0) {
                 return result;
             }
 

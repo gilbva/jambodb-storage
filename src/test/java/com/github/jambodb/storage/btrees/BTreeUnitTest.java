@@ -1,24 +1,32 @@
 package com.github.jambodb.storage.btrees;
 
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
+
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 public class BTreeUnitTest {
     private Random random = new Random();
 
-    @Test
-    public void testMerge() throws IOException {
-        for (int i = 1; i <= 100; i++) {
-            testMerge(i, true);
-            testMerge(i, false);
+    @TestFactory
+    public Collection<DynamicTest> testBorrow() throws IOException {
+        List<DynamicTest> lst = new ArrayList<>();
+        for (int i = 1; i <= 20; i++) {
+            for (int j = 0; j < i; j++) {
+                final int size = i;
+                final int index = j;
+                lst.add(DynamicTest.dynamicTest("testing borrow size=" + i + " index=" + j + " borrowRight=true", () -> testBorrow(size, index, true)));
+                lst.add(DynamicTest.dynamicTest("testing borrow size=" + i + " index=" + j + " borrowRight=false", () -> testBorrow(size, index, false)));
+            }
         }
+        return lst;
     }
 
-    public void testMerge(int size, boolean mergeRight) throws IOException {
+    public void testBorrow(int size, int index, boolean borrowRight) throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(size * 2);
         BTree<String, Integer> btree = new BTree<>(pager);
 
@@ -26,7 +34,87 @@ public class BTreeUnitTest {
         var rightPage = fillWithDummyData(pager.create(false), size);
         var leftPage = fillWithDummyData(pager.create(false), random.nextInt(size) + 1);
 
-        int index = random.nextInt(parent.size());
+        parent.child(index, leftPage.id());
+        parent.child(index+1, rightPage.id());
+
+        var parentExpectedKeys = new ArrayList<>(Arrays.asList(parent.getKeys()));
+        var parentExpectedValues = new ArrayList<>(Arrays.asList(parent.getValues()));
+        var parentExpectedChildren = new ArrayList<>(Arrays.asList(parent.getChildren()));
+
+        var rightExpectedKeys = new ArrayList<>(Arrays.asList(rightPage.getKeys()));
+        var rightExpectedValues = new ArrayList<>(Arrays.asList(rightPage.getValues()));
+        var rightExpectedChildren = new ArrayList<>(Arrays.asList(rightPage.getChildren()));
+
+        var leftExpectedKeys = new ArrayList<>(Arrays.asList(leftPage.getKeys()));
+        var leftExpectedValues = new ArrayList<>(Arrays.asList(leftPage.getValues()));
+        var leftExpectedChildren = new ArrayList<>(Arrays.asList(leftPage.getChildren()));
+
+        boolean canBorrow;
+
+        if(borrowRight) {
+            canBorrow = rightPage.canBorrow();
+            if(canBorrow) {
+                leftExpectedKeys.add(parentExpectedKeys.get(index));
+                leftExpectedValues.add(parentExpectedValues.get(index));
+                parentExpectedKeys.set(index, rightExpectedKeys.get(0));
+                parentExpectedValues.set(index, rightExpectedValues.get(0));
+                rightExpectedKeys.remove(0);
+                rightExpectedValues.remove(0);
+                leftExpectedChildren.add(rightExpectedChildren.get(0));
+                rightExpectedChildren.remove(0);
+            }
+
+            assertEquals(canBorrow, btree.borrowRight(new BTree.Node<>(parent, index), leftPage));
+        }
+        else {
+            canBorrow = leftPage.canBorrow();
+            if(canBorrow) {
+                rightExpectedKeys.add(0, parentExpectedKeys.get(index));
+                rightExpectedValues.add(0, parentExpectedValues.get(index));
+                parentExpectedKeys.set(index, leftExpectedKeys.get(leftExpectedKeys.size() - 1));
+                parentExpectedValues.set(index, leftExpectedValues.get(leftExpectedValues.size() - 1));
+                leftExpectedKeys.remove(leftExpectedKeys.size() - 1);
+                leftExpectedValues.remove(leftExpectedValues.size() - 1);
+                rightExpectedChildren.add(0, leftExpectedChildren.get(leftExpectedChildren.size() - 1));
+                leftExpectedChildren.remove(leftExpectedChildren.size() - 1);
+            }
+
+            assertEquals(canBorrow, btree.borrowLeft(new BTree.Node<>(parent, index+1), rightPage));
+        }
+
+        assertArrayEquals(parentExpectedKeys.toArray(), parent.getKeys());
+        assertArrayEquals(parentExpectedValues.toArray(), parent.getValues());
+        assertArrayEquals(parentExpectedChildren.toArray(), parent.getChildren());
+        assertArrayEquals(leftExpectedKeys.toArray(), leftPage.getKeys());
+        assertArrayEquals(leftExpectedValues.toArray(), leftPage.getValues());
+        assertArrayEquals(leftExpectedChildren.toArray(), leftPage.getChildren());
+        assertArrayEquals(rightExpectedKeys.toArray(), rightPage.getKeys());
+        assertArrayEquals(rightExpectedValues.toArray(), rightPage.getValues());
+        assertArrayEquals(rightExpectedChildren.toArray(), rightPage.getChildren());
+    }
+
+    @TestFactory
+    public Collection<DynamicTest> testMerge() throws IOException {
+        List<DynamicTest> lst = new ArrayList<>();
+        for (int i = 1; i <= 20; i++) {
+            for (int j = 0; j < i; j++) {
+                final int size = i;
+                final int index = j;
+                lst.add(DynamicTest.dynamicTest("testing merge size=" + i + " index=" + j + " mergeRight=true", () -> testMerge(size, index, true)));
+                lst.add(DynamicTest.dynamicTest("testing merge size=" + i + " index=" + j + " mergeRight=false", () -> testMerge(size, index, false)));
+            }
+        }
+        return lst;
+    }
+
+    public void testMerge(int size, int index, boolean mergeRight) throws IOException {
+        MockPager<String, Integer> pager = new MockPager<>(size * 2);
+        BTree<String, Integer> btree = new BTree<>(pager);
+
+        var parent = fillWithDummyData(pager.create(false), size);
+        var rightPage = fillWithDummyData(pager.create(false), size);
+        var leftPage = fillWithDummyData(pager.create(false), random.nextInt(size) + 1);
+
         parent.child(index, leftPage.id());
         parent.child(index+1, rightPage.id());
 
@@ -62,38 +150,45 @@ public class BTreeUnitTest {
         assertArrayEquals(targetExpectedChildren.toArray(), leftPage.getChildren());
     }
 
-    @Test
-    public void testMove() throws IOException {
-        for (int i = 1; i <= 100; i++) {
-            MockPager<String, Integer> pager = new MockPager<>(i);
-            BTree<String, Integer> btree = new BTree<>(pager);
+    @TestFactory
+    public Collection<DynamicTest> testMove() throws IOException {
+        List<DynamicTest> lst = new ArrayList<>();
+        for (int i = 1; i <= 20; i++) {
+            final int size = i;
+            lst.add(DynamicTest.dynamicTest("testing move size=" + i, () -> testMove(size)));
+        }
+        return lst;
+    }
 
-            var source = fillWithDummyData(pager.create(false), i);
-            var target = fillWithDummyData(pager.create(false), 0);
+    public void testMove(int size) throws IOException {
+        MockPager<String, Integer> pager = new MockPager<>(size);
+        BTree<String, Integer> btree = new BTree<>(pager);
 
-            var sourceExpectedKeys = new ArrayList<>(Arrays.asList(source.getKeys()));
-            var sourceExpectedValues = new ArrayList<>(Arrays.asList(source.getValues()));
-            var sourceExpectedChildren = new ArrayList<>(Arrays.asList(source.getChildren()));
+        var source = fillWithDummyData(pager.create(false), size);
+        var target = fillWithDummyData(pager.create(false), 0);
 
-            var targetExpectedKeys = new ArrayList<>(Arrays.asList(target.getKeys()));
-            var targetExpectedValues = new ArrayList<>(Arrays.asList(target.getValues()));
-            var targetExpectedChildren = new ArrayList<>(Arrays.asList(target.getChildren()));
+        var sourceExpectedKeys = new ArrayList<>(Arrays.asList(source.getKeys()));
+        var sourceExpectedValues = new ArrayList<>(Arrays.asList(source.getValues()));
+        var sourceExpectedChildren = new ArrayList<>(Arrays.asList(source.getChildren()));
 
-            while (source.size() > 0) {
-                int index = random.nextInt(source.size());
+        var targetExpectedKeys = new ArrayList<>(Arrays.asList(target.getKeys()));
+        var targetExpectedValues = new ArrayList<>(Arrays.asList(target.getValues()));
+        var targetExpectedChildren = new ArrayList<>(Arrays.asList(target.getChildren()));
 
-                move(sourceExpectedKeys, targetExpectedKeys, index);
-                move(sourceExpectedValues, targetExpectedValues, index);
-                moveChildren(sourceExpectedChildren, targetExpectedChildren, index);
+        while (source.size() > 0) {
+            int index = random.nextInt(source.size());
 
-                btree.move(source, target, index);
-                assertArrayEquals(sourceExpectedKeys.toArray(), source.getKeys());
-                assertArrayEquals(sourceExpectedValues.toArray(), source.getValues());
-                assertArrayEquals(sourceExpectedChildren.toArray(), source.getChildren());
-                assertArrayEquals(targetExpectedKeys.toArray(), target.getKeys());
-                assertArrayEquals(targetExpectedValues.toArray(), target.getValues());
-                assertArrayEquals(targetExpectedChildren.toArray(), target.getChildren());
-            }
+            move(sourceExpectedKeys, targetExpectedKeys, index);
+            move(sourceExpectedValues, targetExpectedValues, index);
+            moveChildren(sourceExpectedChildren, targetExpectedChildren, index);
+
+            btree.move(source, target, index);
+            assertArrayEquals(sourceExpectedKeys.toArray(), source.getKeys());
+            assertArrayEquals(sourceExpectedValues.toArray(), source.getValues());
+            assertArrayEquals(sourceExpectedChildren.toArray(), source.getChildren());
+            assertArrayEquals(targetExpectedKeys.toArray(), target.getKeys());
+            assertArrayEquals(targetExpectedValues.toArray(), target.getValues());
+            assertArrayEquals(targetExpectedChildren.toArray(), target.getChildren());
         }
     }
 
@@ -193,78 +288,92 @@ public class BTreeUnitTest {
         assertEquals(30, target.child(0));
     }
 
-    @Test
-    public void testInsertPlace() throws IOException {
-        for (int i = 1; i <= 26; i++) {
-            MockPager<String, Integer> pager = new MockPager<>(i);
-            BTree<String, Integer> btree = new BTree<>(pager);
+    @TestFactory
+    public Collection<DynamicTest> testInsertPlace() throws IOException {
+        List<DynamicTest> lst = new ArrayList<>();
+        for (int i = 1; i <= 20; i++) {
+            final int size = i;
+            lst.add(DynamicTest.dynamicTest("testing insertPlace size=" + i, () -> testInsertPlace(size)));
+        }
+        return lst;
+    }
 
-            var expectedKeys = new ArrayList<>(i);
-            var expectedValues = new ArrayList<>(i);
-            var expectedChildren = new ArrayList<>(i);
+    public void testInsertPlace(int size) throws IOException {
+        MockPager<String, Integer> pager = new MockPager<>(size);
+        BTree<String, Integer> btree = new BTree<>(pager);
 
-            var nonLeafPage = pager.create(false);
-            nonLeafPage.child(0, i * 10);
-            expectedChildren.add(0, i * 10);
+        var expectedKeys = new ArrayList<>(size);
+        var expectedValues = new ArrayList<>(size);
+        var expectedChildren = new ArrayList<>(size);
 
-            while (expectedKeys.size() < i) {
-                int index = random.nextInt(nonLeafPage.size()+1);
+        var nonLeafPage = pager.create(false);
+        nonLeafPage.child(0, size * 10);
+        expectedChildren.add(0, size * 10);
 
-                String key = String.valueOf((char)('a' + index));
-                int value = index + 1;
-                int child = index * 10;
+        while (expectedKeys.size() < size) {
+            int index = random.nextInt(nonLeafPage.size()+1);
 
-                expectedKeys.add(index, key);
-                expectedValues.add(index, value);
-                expectedChildren.add(index, child);
+            String key = String.valueOf((char)('a' + index));
+            int value = index + 1;
+            int child = index * 10;
 
-                btree.insertPlace(nonLeafPage, index);
-                nonLeafPage.key(index, key);
-                nonLeafPage.value(index, value);
-                nonLeafPage.child(index, child);
+            expectedKeys.add(index, key);
+            expectedValues.add(index, value);
+            expectedChildren.add(index, child);
 
-                assertArrayEquals(expectedKeys.toArray(), nonLeafPage.getKeys());
-                assertArrayEquals(expectedValues.toArray(), nonLeafPage.getValues());
-                assertArrayEquals(expectedChildren.toArray(), nonLeafPage.getChildren());
-            }
+            btree.insertPlace(nonLeafPage, index);
+            nonLeafPage.key(index, key);
+            nonLeafPage.value(index, value);
+            nonLeafPage.child(index, child);
+
+            assertArrayEquals(expectedKeys.toArray(), nonLeafPage.getKeys());
+            assertArrayEquals(expectedValues.toArray(), nonLeafPage.getValues());
+            assertArrayEquals(expectedChildren.toArray(), nonLeafPage.getChildren());
         }
     }
 
-    @Test
-    public void testDeletePlace() throws IOException {
+    @TestFactory
+    public Collection<DynamicTest> testDeletePlace() throws IOException {
+        List<DynamicTest> lst = new ArrayList<>();
+        for (int i = 1; i <= 20; i++) {
+            final int size = i;
+            lst.add(DynamicTest.dynamicTest("testing deletePlace size=" + i, () -> testDeletePlace(size)));
+        }
+        return lst;
+    }
+
+    public void testDeletePlace(int size) throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(26);
         BTree<String, Integer> btree = new BTree<>(pager);
 
-        for (int i = 1; i <= 26; i++) {
-            var expectedKeys = new ArrayList<>(i);
-            var expectedValues = new ArrayList<>(i);
-            var expectedChildren = new ArrayList<>(i);
+        var expectedKeys = new ArrayList<>(size);
+        var expectedValues = new ArrayList<>(size);
+        var expectedChildren = new ArrayList<>(size);
 
-            var nonLeafPage = pager.create(false);
-            nonLeafPage.size(i);
-            for (int j = 0; j < i; j++) {
-                nonLeafPage.key(j, String.valueOf((char)('a' + j)));
-                nonLeafPage.value(j, j);
-                nonLeafPage.child(j, j);
+        var nonLeafPage = pager.create(false);
+        nonLeafPage.size(size);
+        for (int j = 0; j < size; j++) {
+            nonLeafPage.key(j, String.valueOf((char)('a' + j)));
+            nonLeafPage.value(j, j);
+            nonLeafPage.child(j, j);
 
-                expectedKeys.add(nonLeafPage.key(j));
-                expectedValues.add(nonLeafPage.value(j));
-                expectedChildren.add(nonLeafPage.child(j));
-            }
-            nonLeafPage.child(i, i);
-            expectedChildren.add(i);
+            expectedKeys.add(nonLeafPage.key(j));
+            expectedValues.add(nonLeafPage.value(j));
+            expectedChildren.add(nonLeafPage.child(j));
+        }
+        nonLeafPage.child(size, size);
+        expectedChildren.add(size);
 
-            while (nonLeafPage.size() > 0) {
-                int index = random.nextInt(nonLeafPage.size());
-                btree.deletePlace(nonLeafPage, index);
-                expectedKeys.remove(index);
-                expectedValues.remove(index);
-                expectedChildren.remove(index);
+        while (nonLeafPage.size() > 0) {
+            int index = random.nextInt(nonLeafPage.size());
+            btree.deletePlace(nonLeafPage, index);
+            expectedKeys.remove(index);
+            expectedValues.remove(index);
+            expectedChildren.remove(index);
 
-                assertArrayEquals(expectedKeys.toArray(), nonLeafPage.getKeys());
-                assertArrayEquals(expectedValues.toArray(), nonLeafPage.getValues());
-                assertArrayEquals(expectedChildren.toArray(), nonLeafPage.getChildren());
-            }
+            assertArrayEquals(expectedKeys.toArray(), nonLeafPage.getKeys());
+            assertArrayEquals(expectedValues.toArray(), nonLeafPage.getValues());
+            assertArrayEquals(expectedChildren.toArray(), nonLeafPage.getChildren());
         }
     }
 
