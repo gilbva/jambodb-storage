@@ -1,13 +1,12 @@
 package com.github.jambodb.storage.blocks;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Random;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class FileBlockStorageTest {
     private static final Random random = new Random();
@@ -46,7 +45,7 @@ public class FileBlockStorageTest {
 
     private RandomAccessFile createFile() throws IOException {
         File f = File.createTempFile("test-", ".blocks");
-        if(f.exists()) {
+        if (f.exists()) {
             f.delete();
         }
         return new RandomAccessFile(f.getAbsolutePath(), "rw");

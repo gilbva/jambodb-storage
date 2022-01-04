@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 
 /**
  * This class represents a block storage, block is defined as a collections of bytes that are
- * all off the same size, the propose of this class is to handle the underlying storage and give access
+ * all off the same size, the purpose of this class is to handle the underlying storage and give access
  * to it by reading and writing arrays of bytes that can be identified by their index.
  * This class is intended to by implemented to access external memory like a single file but the
  * actual implementation could be anything from main memory access to network access, this interface
@@ -28,14 +28,12 @@ public interface BlockStorage {
     int blockCount();
 
     /**
-     *
      * @return
      * @throws IOException
      */
     int createBlock() throws IOException;
 
     /**
-     *
      * @param index
      * @param data
      * @throws IOException
@@ -43,7 +41,6 @@ public interface BlockStorage {
     void read(int index, ByteBuffer data) throws IOException;
 
     /**
-     *
      * @param index
      * @param data
      * @throws IOException
