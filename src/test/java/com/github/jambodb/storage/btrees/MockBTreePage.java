@@ -22,9 +22,9 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
         this.id = id;
         this.maxDegree = maxDegree;
         this.leaf = leaf;
-        keys = new Object[maxDegree+1];
-        values = new Object[maxDegree+1];
-        children = new int[maxDegree+2];
+        keys = new Object[maxDegree + 1];
+        values = new Object[maxDegree + 1];
+        children = new int[maxDegree + 2];
         Arrays.fill(children, -1);
     }
 
@@ -40,7 +40,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void size(int size) {
-        if(size < 0) {
+        if (size < 0) {
             throw new IllegalArgumentException("invalid size " + size);
         }
         this.size = size;
@@ -69,7 +69,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public K key(int index) {
-        return (K)keys[index];
+        return (K) keys[index];
     }
 
     @Override
@@ -79,7 +79,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public V value(int index) {
-        return (V)values[index];
+        return (V) values[index];
     }
 
     @Override
@@ -111,8 +111,8 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     public Object[] getChildren() {
-        Object[] result = new Object[size+1];
-        for(int i = 0; i < result.length; i++) {
+        Object[] result = new Object[size + 1];
+        for (int i = 0; i < result.length; i++) {
             result[i] = children[i];
         }
         return result;
@@ -120,17 +120,17 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     private Object[] getCleared(Object[] array) {
         Object[] result = new Object[size];
-        for(int i = 0; i < result.length; i++) {
+        for (int i = 0; i < result.length; i++) {
             result[i] = array[i];
         }
         return result;
     }
 
     private void clean() {
-        for(int i = size + 1; i < children.length; i++) {
+        for (int i = size + 1; i < children.length; i++) {
             children[i] = -1;
         }
-        for(int i = size; i < keys.length; i++) {
+        for (int i = size; i < keys.length; i++) {
             keys[i] = null;
             values[i] = null;
         }

@@ -35,7 +35,7 @@ public class BTreeUnitTest {
         var leftPage = fillWithDummyData(pager.create(false), random.nextInt(size) + 1);
 
         parent.child(index, leftPage.id());
-        parent.child(index+1, rightPage.id());
+        parent.child(index + 1, rightPage.id());
 
         var parentExpectedKeys = new ArrayList<>(Arrays.asList(parent.getKeys()));
         var parentExpectedValues = new ArrayList<>(Arrays.asList(parent.getValues()));
@@ -51,9 +51,9 @@ public class BTreeUnitTest {
 
         boolean canBorrow;
 
-        if(borrowRight) {
+        if (borrowRight) {
             canBorrow = rightPage.canBorrow();
-            if(canBorrow) {
+            if (canBorrow) {
                 leftExpectedKeys.add(parentExpectedKeys.get(index));
                 leftExpectedValues.add(parentExpectedValues.get(index));
                 parentExpectedKeys.set(index, rightExpectedKeys.get(0));
@@ -65,10 +65,9 @@ public class BTreeUnitTest {
             }
 
             assertEquals(canBorrow, btree.borrowRight(new BTree.Node<>(parent, index), leftPage));
-        }
-        else {
+        } else {
             canBorrow = leftPage.canBorrow();
-            if(canBorrow) {
+            if (canBorrow) {
                 rightExpectedKeys.add(0, parentExpectedKeys.get(index));
                 rightExpectedValues.add(0, parentExpectedValues.get(index));
                 parentExpectedKeys.set(index, leftExpectedKeys.get(leftExpectedKeys.size() - 1));
@@ -79,7 +78,7 @@ public class BTreeUnitTest {
                 leftExpectedChildren.remove(leftExpectedChildren.size() - 1);
             }
 
-            assertEquals(canBorrow, btree.borrowLeft(new BTree.Node<>(parent, index+1), rightPage));
+            assertEquals(canBorrow, btree.borrowLeft(new BTree.Node<>(parent, index + 1), rightPage));
         }
 
         assertArrayEquals(parentExpectedKeys.toArray(), parent.getKeys());
@@ -116,7 +115,7 @@ public class BTreeUnitTest {
         var leftPage = fillWithDummyData(pager.create(false), random.nextInt(size) + 1);
 
         parent.child(index, leftPage.id());
-        parent.child(index+1, rightPage.id());
+        parent.child(index + 1, rightPage.id());
 
         var targetExpectedKeys = new ArrayList<>(Arrays.asList(leftPage.getKeys()));
         var targetExpectedValues = new ArrayList<>(Arrays.asList(leftPage.getValues()));
@@ -134,13 +133,12 @@ public class BTreeUnitTest {
 
         parentExpectedKeys.remove(index);
         parentExpectedValues.remove(index);
-        parentExpectedChildren.remove(index+1);
+        parentExpectedChildren.remove(index + 1);
 
-        if(mergeRight) {
+        if (mergeRight) {
             btree.mergeRight(new BTree.Node<>(parent, index), leftPage);
-        }
-        else {
-            btree.mergeLeft(new BTree.Node<>(parent, index+1), rightPage);
+        } else {
+            btree.mergeLeft(new BTree.Node<>(parent, index + 1), rightPage);
         }
         assertArrayEquals(parentExpectedKeys.toArray(), parent.getKeys());
         assertArrayEquals(parentExpectedValues.toArray(), parent.getValues());
@@ -311,9 +309,9 @@ public class BTreeUnitTest {
         expectedChildren.add(0, size * 10);
 
         while (expectedKeys.size() < size) {
-            int index = random.nextInt(nonLeafPage.size()+1);
+            int index = random.nextInt(nonLeafPage.size() + 1);
 
-            String key = String.valueOf((char)('a' + index));
+            String key = String.valueOf((char) ('a' + index));
             int value = index + 1;
             int child = index * 10;
 
@@ -353,7 +351,7 @@ public class BTreeUnitTest {
         var nonLeafPage = pager.create(false);
         nonLeafPage.size(size);
         for (int j = 0; j < size; j++) {
-            nonLeafPage.key(j, String.valueOf((char)('a' + j)));
+            nonLeafPage.key(j, String.valueOf((char) ('a' + j)));
             nonLeafPage.value(j, j);
             nonLeafPage.child(j, j);
 
@@ -404,7 +402,7 @@ public class BTreeUnitTest {
 
     private MockBTreePage<String, Integer> fillWithDummyData(MockBTreePage<String, Integer> page, int size) {
         page.size(size);
-        for(int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             page.key(i, "k" + i);
             page.value(i, i * 100);
             page.child(i, i * 10);
