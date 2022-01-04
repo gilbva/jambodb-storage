@@ -23,7 +23,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param <K> The type for the key.
      * @param <V> The type for the value.
      */
-    static class Node<K, V> implements BTreeEntry<K, V> {
+    static class Node<K extends Comparable<K>, V> implements BTreeEntry<K, V> {
         BTreePage<K, V> page;
         int index;
 
@@ -50,6 +50,18 @@ public final class BTree<K extends Comparable<K>, V> {
         public String toString() {
             return String.format("%s=%s", key(), value());
         }
+
+        public boolean isOffPage() {
+            return index >= page.size();
+        }
+
+        private boolean lesserThan(K key) {
+            return key().compareTo(key) < 0;
+        }
+
+        private boolean greaterThan(K key) {
+            return key().compareTo(key) > 0;
+        }
     }
 
     /**
@@ -60,7 +72,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param <K> The type for the key.
      * @param <V> The type for the value.
      */
-    static class Result<K, V> extends Node<K, V> {
+    static class Result<K extends Comparable<K>, V> extends Node<K, V> {
         boolean found;
 
         public Result(BTreePage<K, V> page, int index, boolean found) {
@@ -169,7 +181,7 @@ public final class BTree<K extends Comparable<K>, V> {
 
         final Deque<Node<K, V>> ancestors = new LinkedList<>();
         Node<K, V> first = from == null ? first(root, ancestors) : lookupFirst(from, ancestors);
-        if (to != null && first != null && first.key().compareTo(to) > 0) {
+        if (to != null && first != null && first.greaterThan(to)) {
             first = null;
         }
         final Node<K, V> fromNode = first;
@@ -332,24 +344,34 @@ public final class BTree<K extends Comparable<K>, V> {
     Node<K, V> lookupFirst(K from, Deque<Node<K, V>> ancestors) throws IOException {
         var result = lookup(from, ancestors);
 
-        if(!result.found) {
-            var prevAncestors = new LinkedList<>(ancestors);
-            var prev = prev(result, ancestors);
-            if(prev != null && prev.key().compareTo(from) >= 0) {
-                return prev;
-            }
-
-            ancestors.clear();
-            ancestors.addAll(prevAncestors);
-
-            if(result.key() != null && result.key().compareTo(from) >= 0) {
-                return result;
-            }
-
-            return next(result, ancestors);
+        if(result.found) {
+            return result;
         }
 
-        return result;
+        Node<K, V> current = result;
+        if(current.isOffPage()) {
+            current = prev(current, ancestors);
+        }
+
+        var prevAncestors = new LinkedList<>(ancestors);
+        Node<K, V> prev = current;
+        while (current != null && current.greaterThan(from)) {
+            prevAncestors = new LinkedList<>(ancestors);
+            prev = current;
+            current = prev(current, ancestors);
+        }
+
+        ancestors.clear();
+        ancestors.addAll(prevAncestors);
+        current = prev;
+        while (current != null) {
+            if(current.greaterThan(from)) {
+                return current;
+            }
+            current = next(current, ancestors);
+        }
+
+        return null;
     }
 
     /**

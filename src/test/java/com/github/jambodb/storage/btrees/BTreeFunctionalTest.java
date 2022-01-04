@@ -35,44 +35,59 @@ public class BTreeFunctionalTest {
 
         var strToInt = new BTree<>(new MockPager<String, Integer>(md));
         var intToStr = new BTree<>(new MockPager<Integer, String>(md));
+
         for(int i = 0; i < size; i++) {
-            var str = "k" + i;//UUID.randomUUID().toString().substring(0, 8);
+            var str = UUID.randomUUID().toString().substring(0, 8);
 
-            Assertions.assertNull(intToStr.get(i));
-            Assertions.assertNull(strToInt.get(str));
-
-            strToInt.put(str, i);
-            intToStr.put(i, str);
-
-            Assertions.assertEquals(str, intToStr.get(i));
-            Assertions.assertEquals(i, strToInt.get(str));
-
-            strToInt.remove(str);
-            intToStr.remove(i);
-
-            Assertions.assertNull(intToStr.get(i));
-            Assertions.assertNull(strToInt.get(str));
-
-            strToInt.put(str, i);
-            intToStr.put(i, str);
-
-            Assertions.assertEquals(str, intToStr.get(i));
-            Assertions.assertEquals(i, strToInt.get(str));
-
-            expectedStiTree.put(str, strToInt.get(str));
-            expectedItsTree.put(i, intToStr.get(i));
+            expectedStiTree.put(str, i);
+            expectedItsTree.put(i, str);
         }
 
-        assertEqualTrees(expectedItsTree, intToStr, null, null);
-        assertEqualTrees(expectedItsTree.subMap(0, true, 5, true), intToStr, 0, 5);
-        assertEqualTrees(expectedItsTree.subMap(6, true, 9, true), intToStr, 6, 9);
+        var strQueries = Arrays.asList(new String[][] {
+                { "a", "z" },
+                { "0", "9" }
+        });
 
-        assertEqualTrees(expectedStiTree, strToInt, null, null);
-        assertEqualTrees(expectedStiTree.subMap("a", true, "z", true), strToInt, "a", "z");
-        assertEqualTrees(expectedStiTree.subMap("0", true, "9", true), strToInt, "0", "9");
+        var intQueries = Arrays.asList(new Integer[][] {
+                { 0, 5 },
+                { 6, 9 }
+        });
+
+        testBTree(expectedStiTree, strToInt, strQueries);
+        testBTree(expectedItsTree, intToStr, intQueries);
     }
 
-    private <K extends Comparable<K>, V> void assertEqualTrees(NavigableMap<K, V> tree, BTree<K, V> btree, K from, K to) throws IOException {
+    private <K extends Comparable<K>, V> void testBTree(TreeMap<K, V> tree, BTree<K, V> bTree, List<K[]> queries) throws IOException {
+        for(var entry : tree.entrySet()) {
+            bTree.put(entry.getKey(), entry.getValue());
+            Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
+        }
+
+        for(var entry : tree.entrySet()) {
+            Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
+        }
+
+        for(var key : tree.keySet()) {
+            bTree.remove(key);
+            Assertions.assertNull(bTree.get(key));
+        }
+
+        for(var key : tree.keySet()) {
+            Assertions.assertNull(bTree.get(key));
+        }
+
+        for(var entry : tree.entrySet()) {
+            bTree.put(entry.getKey(), entry.getValue());
+            Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
+        }
+
+        assertQuery(tree, bTree, null, null);
+        for (var query : queries) {
+            assertQuery(tree.subMap(query[0], true, query[1], true), bTree, query[0], query[1]);
+        }
+    }
+
+    private <K extends Comparable<K>, V> void assertQuery(NavigableMap<K, V> tree, BTree<K, V> btree, K from, K to) throws IOException {
         var expected = tree
                 .keySet()
                 .toArray();
@@ -82,6 +97,7 @@ public class BTreeFunctionalTest {
                 .collect(Collectors.toList())
                 .toArray();
 
+        // debug
         if(expected.length != current.length) {
             LOG.log(Level.INFO,"{0} -> {1}", new Object[] { Arrays.toString(expected), Arrays.toString(current) });
             current = toList(btree.query(from, to))
@@ -90,6 +106,7 @@ public class BTreeFunctionalTest {
                     .collect(Collectors.toList())
                     .toArray();
         }
+
         Assertions.assertArrayEquals(expected, current, Arrays.toString(expected) + " => " + Arrays.toString(current));
     }
 
