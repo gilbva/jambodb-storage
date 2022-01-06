@@ -18,7 +18,7 @@ public class BTreeFunctionalTest {
         List<DynamicTest> lst = new ArrayList<>();
         for (int md = 3; md < 100; md += 3) {
             final int maxDegree = md;
-            for (int i = 4; i < 20; i++) {
+            for (int i = 0; i < 20; i++) {
                 final int size = i;
                 lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
             }
@@ -84,7 +84,8 @@ public class BTreeFunctionalTest {
 
         assertQuery(tree, bTree, null, null);
         for (var query : queries) {
-            assertQuery(tree.subMap(query[0], true, query[1], true), bTree, query[0], query[1]);
+            var expected = tree.subMap(query[0], true, query[1], true);
+            assertQuery(expected, bTree, query[0], query[1]);
         }
     }
 
