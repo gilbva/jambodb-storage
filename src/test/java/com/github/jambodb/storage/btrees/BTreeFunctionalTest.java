@@ -3,7 +3,6 @@ package com.github.jambodb.storage.btrees;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
@@ -18,11 +17,15 @@ public class BTreeFunctionalTest {
         List<DynamicTest> lst = new ArrayList<>();
         for (int md = 3; md < 100; md += 3) {
             final int maxDegree = md;
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < 100; i++) {
                 final int size = i;
                 lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
             }
-            for (int i = 1000; i < 10000; i += 1000) {
+        }
+
+        for (int md = 100; md < 300; md += 100) {
+            final int maxDegree = md;
+            for (int i = 10000; i < 100000; i += 10000) {
                 final int size = i;
                 lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
             }

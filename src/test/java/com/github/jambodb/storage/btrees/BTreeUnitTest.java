@@ -2,15 +2,66 @@ package com.github.jambodb.storage.btrees;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class BTreeUnitTest {
     private Random random = new Random();
+
+    @TestFactory
+    public Collection<DynamicTest> testSearch() throws IOException {
+        List<DynamicTest> lst = new ArrayList<>();
+        for (int i = 1; i <= 20; i++) {
+            final int size = i;
+            lst.add(DynamicTest.dynamicTest("testing search size=" + i, () -> testSearch(size)));
+        }
+        for (int i = 1000; i < 10000; i += 1000) {
+            final int size = i;
+            lst.add(DynamicTest.dynamicTest("testing search size=" + i, () -> testSearch(size)));
+        }
+        return lst;
+    }
+
+    public void testSearch(int size) throws IOException {
+        MockPager<Integer, Integer> pager = new MockPager<>(size);
+        BTree<Integer, Integer> btree = new BTree<>(pager);
+
+        int[] keys = getOrderedRandomKeys(size);
+        var page = fillWithKeys(pager.create(false), keys);
+
+        var keysSet = Arrays.stream(keys).boxed().collect(Collectors.toSet());
+        for(int i = 0; i < keys.length; i++) {
+            var result = btree.search(page, keys[i]);
+            Assertions.assertTrue(result.found);
+            Assertions.assertEquals(i, result.index);
+            if(i < keys.length - 1) {
+                result = btree.search(page, keys[i] + 1);
+                Assertions.assertEquals(keysSet.contains(keys[i]+1), result.found);
+                Assertions.assertEquals(i+1, result.index);
+            }
+        }
+    }
+
+    @Test
+    public void testGrowShrink() throws IOException {
+        MockPager<String, Integer> pager = new MockPager<>(3);
+        BTree<String, Integer> btree = new BTree<>(pager);
+
+        var rootId = btree.root.id();
+        btree.grow();
+        Assertions.assertNotEquals(rootId, btree.root.id());
+        Assertions.assertEquals(pager.root(), btree.root.id());
+        Assertions.assertEquals(rootId, btree.root.child(0));
+
+        btree.shrink();
+        Assertions.assertEquals(rootId, btree.root.id());
+        Assertions.assertEquals(pager.root(), btree.root.id());
+    }
 
     @TestFactory
     public Collection<DynamicTest> testBorrow() throws IOException {
@@ -409,5 +460,25 @@ public class BTreeUnitTest {
         }
         page.child(size, size * 10);
         return page;
+    }
+
+    private MockBTreePage<Integer, Integer> fillWithKeys(MockBTreePage<Integer, Integer> page, int[] keys) {
+        page.size(keys.length);
+        for (int i = 0; i < keys.length; i++) {
+            page.key(i, keys[i]);
+            page.value(i, i);
+            page.child(i, i * 10);
+
+        }
+        page.child(keys.length, keys.length * 10);
+        return page;
+    }
+
+    private int[] getOrderedRandomKeys(int size) {
+        Set<Integer> integers = new TreeSet<>();
+        while (integers.size() < size) {
+            integers.add(random.nextInt(size * 100 ));
+        }
+        return integers.stream().mapToInt(i -> i).toArray();
     }
 }

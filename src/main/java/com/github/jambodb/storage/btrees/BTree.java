@@ -106,10 +106,6 @@ public final class BTree<K extends Comparable<K>, V> {
      * Given a key this method will search the tree from top to bottom to find it,
      * if the given key is found this method will read and return its value but if the
      * given key is not found the method will return null.
-     * <p>
-     * IMPORTANT: if the underlying storage returns null for the value of the given key,
-     * this method will still return null, hence by using this method along there is
-     * no way of determining if a given key does not exist or its value is null.
      *
      * @param key The key to look for in the tree.
      * @return The value associated with the key or null if it does not exist.
@@ -124,11 +120,24 @@ public final class BTree<K extends Comparable<K>, V> {
     }
 
     /**
+     * Determines if a particular key exists in the tree,
+     * by searching from top to bottom.
+     *
+     * @param key the key to lookup.
+     * @return true if the key exists, false if the key does not exist.
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
+     */
+    public boolean exists(K key) throws IOException {
+        var result = lookup(key, null);
+        return result.found;
+    }
+
+    /**
      * Sets the given key to the given value by inserting or updating it.
      *
      * @param key
      * @param value
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     public void put(K key, V value) throws IOException {
         var ancestors = new LinkedList<Node<K, V>>();
@@ -150,7 +159,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * Removes the given key from the tree if it exists.
      *
      * @param key
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     public void remove(K key) throws IOException {
         var ancestors = new LinkedList<Node<K, V>>();
@@ -171,7 +180,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param from
      * @param to
      * @return
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     public Iterator<BTreeEntry<K, V>> query(K from, K to) throws IOException {
         if (root.isLeaf() && root.size() == 0) {
@@ -218,7 +227,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param current
      * @param ancestors
      * @return
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Node<K, V> first(BTreePage<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         while (!current.isLeaf()) {
@@ -239,7 +248,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param current
      * @param ancestors
      * @return
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Node<K, V> last(BTreePage<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         while (!current.isLeaf()) {
@@ -260,7 +269,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param current
      * @param ancestors
      * @return
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Node<K, V> next(Node<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         if (current.page.isLeaf()) {
@@ -289,7 +298,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param current
      * @param ancestors
      * @return
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Node<K, V> prev(Node<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         if (current.page.isLeaf()) {
@@ -313,31 +322,12 @@ public final class BTree<K extends Comparable<K>, V> {
     }
 
     /**
-     * Recursively search for the specified key starting at the root of the tree, until either the key is found,
-     * or a leaf node that does not contain the key is reached.
      *
-     * @param key
+     * @param from
      * @param ancestors
      * @return
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
-    Result<K, V> lookup(K key, Deque<Node<K, V>> ancestors) throws IOException {
-        var current = root;
-        while (!current.isLeaf()) {
-            var result = search(current, key);
-            if (result.found) {
-                return result;
-            }
-
-            if (ancestors != null) {
-                ancestors.addFirst(result);
-            }
-            current = getChildPage(result.page, result.index);
-        }
-
-        return search(current, key);
-    }
-
     Node<K, V> lookupFirst(K from, Deque<Node<K, V>> ancestors) throws IOException {
         var result = lookup(from, ancestors);
 
@@ -372,12 +362,38 @@ public final class BTree<K extends Comparable<K>, V> {
     }
 
     /**
+     * Recursively search for the specified key starting at the root of the tree, until either the key is found,
+     * or a leaf node that does not contain the key is reached.
+     *
+     * @param key
+     * @param ancestors
+     * @return
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
+     */
+    Result<K, V> lookup(K key, Deque<Node<K, V>> ancestors) throws IOException {
+        var current = root;
+        while (!current.isLeaf()) {
+            var result = search(current, key);
+            if (result.found) {
+                return result;
+            }
+
+            if (ancestors != null) {
+                ancestors.addFirst(result);
+            }
+            current = getChildPage(result.page, result.index);
+        }
+
+        return search(current, key);
+    }
+
+    /**
      * Performs a binary search for the specified key in the given page.
      *
      * @param page
      * @param key
      * @return
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Result<K, V> search(BTreePage<K, V> page, K key) throws IOException {
         int p = 0;
@@ -407,7 +423,7 @@ public final class BTree<K extends Comparable<K>, V> {
      *
      * @param source
      * @param ancestors
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     void split(BTreePage<K, V> source, Deque<Node<K, V>> ancestors) throws IOException {
         Node<K, V> parent;
@@ -434,7 +450,7 @@ public final class BTree<K extends Comparable<K>, V> {
      *
      * @param target
      * @param ancestors
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     void fill(BTreePage<K, V> target, Deque<Node<K, V>> ancestors) throws IOException {
         if (ancestors.isEmpty()) {
@@ -461,7 +477,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * Grows the tree by adding a new root page.
      *
      * @return
-     * @throws IOException
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Node<K, V> grow() throws IOException {
         var newRoot = pager.create(false);
