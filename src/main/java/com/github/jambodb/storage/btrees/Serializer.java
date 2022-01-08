@@ -3,7 +3,7 @@ package com.github.jambodb.storage.btrees;
 import java.nio.ByteBuffer;
 
 /**
- * This class allows to read/write a particular type of values to the/from the given buffer.
+ * This class allows reading/writing a particular type of values from/to the given buffer.
  *
  * @param <T> the type this serializer manages.
  */

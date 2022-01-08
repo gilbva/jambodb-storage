@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,14 +36,14 @@ public class BTreeUnitTest {
         var page = fillWithKeys(pager.create(false), keys);
 
         var keysSet = Arrays.stream(keys).boxed().collect(Collectors.toSet());
-        for(int i = 0; i < keys.length; i++) {
+        for (int i = 0; i < keys.length; i++) {
             var result = btree.search(page, keys[i]);
             Assertions.assertTrue(result.found);
             Assertions.assertEquals(i, result.index);
-            if(i < keys.length - 1) {
+            if (i < keys.length - 1) {
                 result = btree.search(page, keys[i] + 1);
-                Assertions.assertEquals(keysSet.contains(keys[i]+1), result.found);
-                Assertions.assertEquals(i+1, result.index);
+                Assertions.assertEquals(keysSet.contains(keys[i] + 1), result.found);
+                Assertions.assertEquals(i + 1, result.index);
             }
         }
     }
@@ -477,7 +478,7 @@ public class BTreeUnitTest {
     private int[] getOrderedRandomKeys(int size) {
         Set<Integer> integers = new TreeSet<>();
         while (integers.size() < size) {
-            integers.add(random.nextInt(size * 100 ));
+            integers.add(random.nextInt(size * 100));
         }
         return integers.stream().mapToInt(i -> i).toArray();
     }
