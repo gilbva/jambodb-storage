@@ -322,10 +322,11 @@ public final class BTree<K extends Comparable<K>, V> {
     }
 
     /**
+     * Looks up the node for the smallest key that is greater than the given key.
      *
-     * @param from
-     * @param ancestors
-     * @return
+     * @param from the lower bound key to look for in the tree.
+     * @param ancestors the list of ancestors that will be populated as the structure is searched from top to bottom.
+     * @return a result node referencing the given key if found, or the node referencing the next key from the given key.
      * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Node<K, V> lookupFirst(K from, Deque<Node<K, V>> ancestors) throws IOException {
@@ -365,9 +366,9 @@ public final class BTree<K extends Comparable<K>, V> {
      * Recursively search for the specified key starting at the root of the tree, until either the key is found,
      * or a leaf node that does not contain the key is reached.
      *
-     * @param key
-     * @param ancestors
-     * @return
+     * @param key the key to lookup.
+     * @param ancestors the list of ancestors that will be populated as the structure is searched from top to bottom.
+     * @return a result node referencing the given key if found, or the node from the last visited leaf page if the node does not exist.
      * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Result<K, V> lookup(K key, Deque<Node<K, V>> ancestors) throws IOException {
@@ -390,9 +391,10 @@ public final class BTree<K extends Comparable<K>, V> {
     /**
      * Performs a binary search for the specified key in the given page.
      *
-     * @param page
-     * @param key
-     * @return
+     * @param page the page to search the given key.
+     * @param key the key to search for.
+     * @return a result node containing either the node of the given key if found,
+     *         or the node with the smallest key greater than the given key.
      * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Result<K, V> search(BTreePage<K, V> page, K key) throws IOException {
@@ -421,8 +423,8 @@ public final class BTree<K extends Comparable<K>, V> {
      * Splits a page that has become full into two pages by creating a new page and moving half
      * of the nodes to the new page.
      *
-     * @param source
-     * @param ancestors
+     * @param source the page to be split.
+     * @param ancestors the ancestors of the current page.
      * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     void split(BTreePage<K, V> source, Deque<Node<K, V>> ancestors) throws IOException {
