@@ -8,9 +8,6 @@ import java.util.Random;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 public class FileBlockStorageTest {
     private static final Random random = new Random();
 
@@ -37,6 +34,30 @@ public class FileBlockStorageTest {
             var toRead = ByteBuffer.allocate(readStorage.blockSize());
             storage.createBlock();
             storage.read(i, toRead);
+        }
+    }
+
+    @Test
+    public void testFileBlockStorageWithIntValues() throws IOException {
+        var raf = createFile();
+        var storage = new FileBlockStorage(4, raf);
+
+        for (int i = 0; i < 1000; i++) {
+            storage.createBlock();
+            ByteBuffer buffer = ByteBuffer.allocate(storage.blockSize());
+            buffer.putInt(i);
+            storage.write(i, buffer);
+            storage.read(i, buffer);
+            Assertions.assertEquals(i, buffer.getInt());
+        }
+
+        var readStorage = new FileBlockStorage(raf);
+        Assertions.assertEquals(storage.blockCount(), readStorage.blockCount());
+        Assertions.assertEquals(storage.blockSize(), readStorage.blockSize());
+        for (int i = 0; i < 1000; i++) {
+            var toRead = ByteBuffer.allocate(readStorage.blockSize());
+            readStorage.read(i, toRead);
+            Assertions.assertEquals(i, toRead.getInt());
         }
     }
 
