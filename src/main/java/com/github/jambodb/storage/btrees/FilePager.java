@@ -3,7 +3,6 @@ package com.github.jambodb.storage.btrees;
 import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.blocks.FileBlockStorage;
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -12,22 +11,31 @@ import java.util.*;
 public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     private static final int INDEX_BLOCK_SIZE = 4;
 
+    private final File dir;
+    private final Serializer<K> keySerializer;
+    private final Serializer<V> valueSerializer;
     private final int maxDegree;
     private final Map<Integer, FileBTreePage<K, V>> map;
     private int root;
     private int lastPage;
 
-    public FilePager(int maxDegree) {
+    public FilePager(int maxDegree, File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
         this.maxDegree = maxDegree;
+        this.dir = dir;
         this.map = new HashMap<>();
+        this.keySerializer = keySerializer;
+        this.valueSerializer = valueSerializer;
     }
 
     public FilePager(File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+        this.dir = dir;
         int[] blocks = readHeader(dir);
         root = blocks[0];
         maxDegree = blocks[1];
         lastPage = blocks[2];
         this.map = new HashMap<>();
+        this.keySerializer = keySerializer;
+        this.valueSerializer = valueSerializer;
         readPages(dir, keySerializer, valueSerializer);
     }
 
@@ -48,7 +56,7 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
 
     @Override
     public FileBTreePage<K, V> create(boolean leaf) {
-        FileBTreePage<K, V> page = new FileBTreePage<>(lastPage++, leaf, maxDegree);
+        FileBTreePage<K, V> page = new FileBTreePage<>(lastPage++, leaf, maxDegree, keySerializer, valueSerializer);
         map.put(lastPage, page);
         return page;
     }
@@ -62,9 +70,9 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     }
 
     @Override
-    public void fsync(File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
+    public void fsync() throws IOException {
         writeHeader(dir);
-        writePages(dir, keySerializer, valueSerializer);
+        writePages(dir);
         cleanPages(dir);
     }
 
@@ -103,10 +111,10 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         }
     }
 
-    private void writePages(File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
+    private void writePages(File dir) throws IOException {
         Collection<FileBTreePage<K, V>> pages = map.values();
         for (FileBTreePage<K, V> page : pages) {
-            page.fsync(dir, keySerializer, valueSerializer);
+            page.fsync(dir);
         }
     }
 

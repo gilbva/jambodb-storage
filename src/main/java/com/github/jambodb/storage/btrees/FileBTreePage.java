@@ -12,6 +12,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     private static final int HEADER_BLOCK_SIZE = 4;
     private static final int BLOCK_SIZE = 8 * 1024; // todo
 
+    private final Serializer<K> keySerializer;
+    private final Serializer<V> valueSerializer;
     private final int id;
     private final boolean leaf;
     private final int maxDegree;
@@ -21,7 +23,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private int size;
 
-    public FileBTreePage(int id, boolean leaf, int maxDegree) {
+    public FileBTreePage(int id, boolean leaf, int maxDegree, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
         this.id = id;
         this.leaf = leaf;
         this.maxDegree = maxDegree;
@@ -30,6 +32,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         children = new int[maxDegree + 2];
         Arrays.fill(children, -1);
         size = 0;
+        this.keySerializer = keySerializer;
+        this.valueSerializer = valueSerializer;
     }
 
     public FileBTreePage(int id, File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
@@ -42,6 +46,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         children = new int[maxDegree + 2];
         Arrays.fill(children, -1);
         size = blocks[3];
+        this.keySerializer = keySerializer;
+        this.valueSerializer = valueSerializer;
         //noinspection unchecked
         readObjects(dir, "k", keys, (Serializer<Object>) keySerializer);
         //noinspection unchecked
@@ -136,7 +142,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         }
     }
 
-    public void fsync(File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
+    public void fsync(File dir) throws IOException {
         if (dir == null || !dir.isDirectory() || !dir.canWrite()) {
             throw new IOException("Invalid directory");
         }
