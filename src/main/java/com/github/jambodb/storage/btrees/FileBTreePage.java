@@ -2,7 +2,9 @@ package com.github.jambodb.storage.btrees;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.blocks.FileBlockStorage;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
@@ -28,6 +30,23 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         children = new int[maxDegree + 2];
         Arrays.fill(children, -1);
         size = 0;
+    }
+
+    public FileBTreePage(int id, File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
+        this.id = id;
+        int[] blocks = readHeader(dir);
+        this.leaf = blocks[1] == 1;
+        this.maxDegree = blocks[2];
+        keys = new Object[maxDegree + 1];
+        values = new Object[maxDegree + 1];
+        children = new int[maxDegree + 2];
+        Arrays.fill(children, -1);
+        size = blocks[3];
+        //noinspection unchecked
+        readObjects(dir, "k", keys, (Serializer<Object>) keySerializer);
+        //noinspection unchecked
+        readObjects(dir, "v", values, (Serializer<Object>) valueSerializer);
+        readChildren(dir);
     }
 
     @Override
@@ -129,8 +148,20 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         writeChildren(dir);
     }
 
+    private int[] readHeader(File dir) throws IOException {
+        File file = getFile(dir, "h", false);
+        BlockStorage blockStorage = new FileBlockStorage(new RandomAccessFile(file, "r"));
+        int[] blocks = new int[4];
+        for (int i = 0; i < blocks.length; i++) {
+            ByteBuffer buffer = ByteBuffer.allocate(HEADER_BLOCK_SIZE);
+            blockStorage.read(i, buffer);
+            blocks[i] = buffer.getInt();
+        }
+        return blocks;
+    }
+
     private void writeHeader(File dir) throws IOException {
-        File file = createFile(dir, "h");
+        File file = getFile(dir, "h", true);
         int[] blocks = new int[4];
         blocks[0] = id;
         blocks[1] = leaf ? 1 : 0;
@@ -145,8 +176,19 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         }
     }
 
+    private void readObjects(File dir, String prefix, Object[] array, Serializer<Object> serializer) throws IOException {
+        File file = getFile(dir, prefix, false);
+        BlockStorage blockStorage = new FileBlockStorage(BLOCK_SIZE, new RandomAccessFile(file, "r"));
+        for (int i = 0; i < size; i++) {
+            ByteBuffer buffer = ByteBuffer.allocate(BLOCK_SIZE);
+            blockStorage.read(i, buffer);
+            Object object = serializer.read(buffer);
+            array[i] = object;
+        }
+    }
+
     private void writeObjects(File dir, String prefix, Object[] array, Serializer<Object> serializer) throws IOException {
-        File file = createFile(dir, prefix);
+        File file = getFile(dir, prefix, true);
         BlockStorage blockStorage = new FileBlockStorage(BLOCK_SIZE, new RandomAccessFile(file, "rw"));
         for (int i = 0; i < size; i++) {
             int index = blockStorage.createBlock();
@@ -156,8 +198,18 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         }
     }
 
+    private void readChildren(File dir) throws IOException {
+        File file = getFile(dir, "c", false);
+        BlockStorage blockStorage = new FileBlockStorage(HEADER_BLOCK_SIZE, new RandomAccessFile(file, "r"));
+        for (int i = 0; i <= size; i++) {
+            ByteBuffer buffer = ByteBuffer.allocate(HEADER_BLOCK_SIZE);
+            blockStorage.read(i, buffer);
+            children[i] = buffer.getInt();
+        }
+    }
+
     private void writeChildren(File dir) throws IOException {
-        File file = createFile(dir, "c");
+        File file = getFile(dir, "c", true);
         BlockStorage blockStorage = new FileBlockStorage(HEADER_BLOCK_SIZE, new RandomAccessFile(file, "rw"));
         for (int i = 0; i <= size; i++) {
             int index = blockStorage.createBlock();
@@ -167,13 +219,16 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         }
     }
 
-    private File createFile(File dir, String prefix) throws IOException {
+    private File getFile(File dir, String prefix, boolean create) throws IOException {
         File file = new File(dir, String.format("%s-%d.jmb.dat", prefix, id));
-        if (file.exists() && !file.delete()) {
+        if (create && file.exists() && !file.delete()) {
             throw new IOException("Could not write file " + file.getAbsolutePath());
         }
-        if (file.createNewFile()) {
+        if (create && !file.exists() && !file.createNewFile()) {
             throw new IOException("Could not write file " + file.getAbsolutePath());
+        }
+        if (!create && !file.exists()) {
+            throw new IOException("Could not read file " + file.getAbsolutePath());
         }
         return file;
     }
