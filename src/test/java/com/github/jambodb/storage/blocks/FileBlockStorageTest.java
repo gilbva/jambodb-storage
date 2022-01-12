@@ -42,10 +42,11 @@ public class FileBlockStorageTest {
         var raf = createFile();
         var storage = new FileBlockStorage(4, raf);
 
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 10; i++) {
             storage.createBlock();
             ByteBuffer buffer = ByteBuffer.allocate(storage.blockSize());
             buffer.putInt(i);
+            buffer.flip();
             storage.write(i, buffer);
             storage.read(i, buffer);
             Assertions.assertEquals(i, buffer.getInt());
@@ -54,7 +55,7 @@ public class FileBlockStorageTest {
         var readStorage = new FileBlockStorage(raf);
         Assertions.assertEquals(storage.blockCount(), readStorage.blockCount());
         Assertions.assertEquals(storage.blockSize(), readStorage.blockSize());
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 10; i++) {
             var toRead = ByteBuffer.allocate(readStorage.blockSize());
             readStorage.read(i, toRead);
             Assertions.assertEquals(i, toRead.getInt());

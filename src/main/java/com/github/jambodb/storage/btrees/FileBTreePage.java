@@ -5,16 +5,15 @@ import com.github.jambodb.storage.blocks.FileBlockStorage;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class FileBTreePage<K, V> implements BTreePage<K, V> {
     private static final int HEADER_BLOCK_SIZE = 4;
-    private static final int BLOCK_SIZE = 8 * 1024; // todo
 
     private final Serializer<K> keySerializer;
     private final Serializer<V> valueSerializer;
+    private final int blockSize;
     private final int id;
     private final boolean leaf;
     private final int maxDegree;
@@ -24,7 +23,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private int size;
 
-    public FileBTreePage(int id, boolean leaf, int maxDegree, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+    public FileBTreePage(int id, boolean leaf, int maxDegree,
+                         Serializer<K> keySerializer, Serializer<V> valueSerializer, int blockSize) {
         this.id = id;
         this.leaf = leaf;
         this.maxDegree = maxDegree;
@@ -35,12 +35,13 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         size = 0;
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
+        this.blockSize = blockSize;
     }
 
     public FileBTreePage(int id, File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
         this.id = id;
         int[] blocks = readHeader(dir);
-        if (blocks.length < 4) {
+        if (blocks.length < 5) {
             throw new IOException(String.format("Could not read page %d header", id));
         }
         this.leaf = blocks[1] == 1;
@@ -52,6 +53,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         size = blocks[3];
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
+        blockSize = blocks[4];
         //noinspection unchecked
         readObjects(dir, "k", keys, (Serializer<Object>) keySerializer);
         //noinspection unchecked
@@ -181,16 +183,18 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private void writeHeader(File dir) throws IOException {
         File file = getFile(dir, "h", true);
-        int[] blocks = new int[4];
+        int[] blocks = new int[5];
         blocks[0] = id;
         blocks[1] = leaf ? 1 : 0;
         blocks[2] = maxDegree;
         blocks[3] = size;
+        blocks[4] = blockSize;
         BlockStorage blockStorage = new FileBlockStorage(HEADER_BLOCK_SIZE, new RandomAccessFile(file, "rw"));
         for (int block : blocks) {
             int index = blockStorage.createBlock() - 1;
             ByteBuffer buffer = ByteBuffer.allocate(HEADER_BLOCK_SIZE);
             buffer.putInt(block);
+            buffer.flip();
             blockStorage.write(index, buffer);
         }
     }
@@ -199,7 +203,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         File file = getFile(dir, prefix, false);
         BlockStorage blockStorage = new FileBlockStorage(new RandomAccessFile(file, "r"));
         for (int i = 0; i < size; i++) {
-            ByteBuffer buffer = ByteBuffer.allocate(BLOCK_SIZE);
+            ByteBuffer buffer = ByteBuffer.allocate(blockSize);
             blockStorage.read(i, buffer);
             Object object = serializer.read(buffer);
             array[i] = object;
@@ -208,11 +212,12 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private void writeObjects(File dir, String prefix, Object[] array, Serializer<Object> serializer) throws IOException {
         File file = getFile(dir, prefix, true);
-        BlockStorage blockStorage = new FileBlockStorage(BLOCK_SIZE, new RandomAccessFile(file, "rw"));
+        BlockStorage blockStorage = new FileBlockStorage(blockSize, new RandomAccessFile(file, "rw"));
         for (int i = 0; i < size; i++) {
             int index = blockStorage.createBlock() - 1;
-            ByteBuffer buffer = ByteBuffer.allocate(BLOCK_SIZE);
+            ByteBuffer buffer = ByteBuffer.allocate(blockSize);
             serializer.write(array[i], buffer);
+            buffer.flip();
             blockStorage.write(index, buffer);
         }
     }
@@ -234,6 +239,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             int index = blockStorage.createBlock() - 1;
             ByteBuffer buffer = ByteBuffer.allocate(HEADER_BLOCK_SIZE);
             buffer.putInt(children[i]);
+            buffer.flip();
             blockStorage.write(index, buffer);
         }
     }

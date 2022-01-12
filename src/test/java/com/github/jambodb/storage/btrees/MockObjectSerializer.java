@@ -4,15 +4,19 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class MockObjectSerializer implements Serializer<MockObject> {
+    private static final String sep = "<>";
+
     @Override
     public MockObject read(ByteBuffer buffer) {
-        String string = new String(buffer.array(), StandardCharsets.UTF_8);
-        String[] parts = string.split("\\|");
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        String string = new String(bytes, StandardCharsets.UTF_8);
+        String[] parts = string.split(sep);
         if (parts.length == 3) {
             MockObject object = new MockObject();
-            object.setStringValue(parts[0]);
-            object.setBoolValue("1".equals(parts[1]));
-            object.setIntValue(Integer.parseInt(parts[2]));
+            object.setStringValue(parts[0].trim());
+            object.setBoolValue("1".equals(parts[1].trim()));
+            object.setIntValue(Integer.parseInt(parts[2].trim()));
             return object;
         }
         return null;
@@ -21,8 +25,8 @@ public class MockObjectSerializer implements Serializer<MockObject> {
     @Override
     public void write(MockObject value, ByteBuffer buffer) {
         if (value != null) {
-            String string = String.format("%s|%d|%d",
-                value.getStringValue(), value.isBoolValue() ? 1 : 0, value.getIntValue());
+            String string = String.format("%s%s%d%s%d",
+                value.getStringValue(), sep, value.isBoolValue() ? 1 : 0, sep, value.getIntValue());
             byte[] bytes = StandardCharsets.UTF_8.encode(string).array();
             buffer.put(bytes);
         }

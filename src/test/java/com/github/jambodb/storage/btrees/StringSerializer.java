@@ -6,7 +6,9 @@ import java.nio.charset.StandardCharsets;
 public class StringSerializer implements Serializer<String> {
     @Override
     public String read(ByteBuffer buffer) {
-        return new String(buffer.array(), StandardCharsets.UTF_8);
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     @Override

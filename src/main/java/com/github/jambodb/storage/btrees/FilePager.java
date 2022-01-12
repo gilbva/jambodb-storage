@@ -14,25 +14,31 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     private final File dir;
     private final Serializer<K> keySerializer;
     private final Serializer<V> valueSerializer;
+    private final int blockSize;
     private final int maxDegree;
     private final Map<Integer, FileBTreePage<K, V>> map;
     private int root;
     private int lastPage;
 
-    public FilePager(int maxDegree, File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+    public FilePager(int maxDegree, File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer, int blockSize) {
         this.maxDegree = maxDegree;
         this.dir = dir;
         this.map = new HashMap<>();
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
+        this.blockSize = blockSize;
     }
 
-    public FilePager(File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+    public FilePager(File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
         this.dir = dir;
         int[] blocks = readHeader(dir);
+        if (blocks.length < 4) {
+            throw new IOException("Could not read pager header");
+        }
         root = blocks[0];
         maxDegree = blocks[1];
         lastPage = blocks[2];
+        blockSize = blocks[3];
         this.map = new HashMap<>();
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
@@ -56,7 +62,8 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
 
     @Override
     public FileBTreePage<K, V> create(boolean leaf) {
-        FileBTreePage<K, V> page = new FileBTreePage<>(lastPage++, leaf, maxDegree, keySerializer, valueSerializer);
+        FileBTreePage<K, V> page
+            = new FileBTreePage<>(lastPage++, leaf, maxDegree, keySerializer, valueSerializer, blockSize);
         map.put(lastPage, page);
         return page;
     }
@@ -76,8 +83,19 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         cleanPages(dir);
     }
 
-    private int[] readHeader(File dir) {
-        return new int[0];
+    private int[] readHeader(File dir) throws IOException {
+        File file = new File(dir, "index.jmb.dat");
+        if (!file.exists()) {
+            return new int[0];
+        }
+        BlockStorage blockStorage = new FileBlockStorage(new RandomAccessFile(file, "r"));
+        int[] blocks = new int[blockStorage.blockCount()];
+        for (int i = 0; i < blocks.length; i++) {
+            ByteBuffer buffer = ByteBuffer.allocate(blockStorage.blockSize());
+            blockStorage.read(i, buffer);
+            blocks[i] = buffer.getInt();
+        }
+        return blocks;
     }
 
     private void writeHeader(File dir) throws IOException {
