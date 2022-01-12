@@ -45,6 +45,14 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         readPages(dir, keySerializer, valueSerializer);
     }
 
+    public int lastPage() {
+        return lastPage;
+    }
+
+    public int blockSize() {
+        return blockSize;
+    }
+
     @Override
     public int root() {
         return root;
@@ -103,18 +111,20 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         if (file.exists() && !file.delete()) {
             throw new IOException("Could not write file " + file.getAbsolutePath());
         }
-        if (file.createNewFile()) {
+        if (!file.createNewFile()) {
             throw new IOException("Could not write file " + file.getAbsolutePath());
         }
-        int[] blocks = new int[3];
+        int[] blocks = new int[4];
         blocks[0] = root;
         blocks[1] = maxDegree;
         blocks[2] = lastPage;
+        blocks[3] = blockSize;
         BlockStorage blockStorage = new FileBlockStorage(INDEX_BLOCK_SIZE, new RandomAccessFile(file, "rw"));
         for (int block : blocks) {
-            int index = blockStorage.createBlock();
+            int index = blockStorage.createBlock() - 1;
             ByteBuffer buffer = ByteBuffer.allocate(INDEX_BLOCK_SIZE);
             buffer.putInt(block);
+            buffer.flip();
             blockStorage.write(index, buffer);
         }
     }

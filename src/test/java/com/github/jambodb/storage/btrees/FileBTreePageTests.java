@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class FileBTreeTests {
+public class FileBTreePageTests {
     private static Serializer<String> stringSerializer;
     private static Serializer<MockObject> mockSerializer;
 
