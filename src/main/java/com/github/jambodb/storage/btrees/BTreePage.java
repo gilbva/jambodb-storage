@@ -24,9 +24,9 @@ public interface BTreePage<K, V> {
     /**
      * Sets the current size of the page.
      *
-     * @param size the size of the page, it must be less than its total capacity.
+     * @param value the size of the page, it must be less than its total capacity.
      */
-    void size(int size);
+    void size(int value);
 
     /**
      * Determines if this page is a leaf page or not.
@@ -68,9 +68,9 @@ public interface BTreePage<K, V> {
      * Sets the key for the element at the given index.
      *
      * @param index the index of the element to set the key to.
-     * @param key the key of the given element.
+     * @param data the key of the given element.
      */
-    void key(int index, K key);
+    void key(int index, K data);
 
     /**
      * Gets the value for the element at the given index.
@@ -84,9 +84,9 @@ public interface BTreePage<K, V> {
      * Sets the value for the element at the given index.
      *
      * @param index the index of the element to look for.
-     * @param value the value of the given element.
+     * @param data the value of the given element.
      */
-    void value(int index, V value);
+    void value(int index, V data);
 
     /**
      * Gets the id of the child page for the element at the given index.
@@ -100,7 +100,7 @@ public interface BTreePage<K, V> {
      * Sets the id of the child page for the element at the given index.
      *
      * @param index the index of the element to look for.
-     * @param child the id of the child page for the given element.
+     * @param id the id of the child page for the given element.
      */
-    void child(int index, int child);
+    void child(int index, int id);
 }

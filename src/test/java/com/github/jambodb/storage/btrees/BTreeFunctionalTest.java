@@ -14,9 +14,9 @@ public class BTreeFunctionalTest {
     public static final Logger LOG = Logger.getLogger(BTreeFunctionalTest.class.getName());
 
     @TestFactory
-    public Collection<DynamicTest> testBTree() throws IOException {
+    public Collection<DynamicTest> testBTree() {
         List<DynamicTest> lst = new ArrayList<>();
-        for (int md = 3; md < 100; md += 3) {
+        for (int md = 2; md < 100; md += 3) {
             final int maxDegree = md;
             for (int i = 0; i < 100; i++) {
                 final int size = i;
@@ -99,18 +99,14 @@ public class BTreeFunctionalTest {
                 .toArray();
         var current = toList(btree.query(from, to))
                 .stream()
-                .map(BTreeEntry::key)
-                .collect(Collectors.toList())
-                .toArray();
+                .map(BTreeEntry::key).toArray();
 
         // debug
         if (expected.length != current.length) {
             LOG.log(Level.INFO, "{0} -> {1}", new Object[]{Arrays.toString(expected), Arrays.toString(current)});
             current = toList(btree.query(from, to))
                     .stream()
-                    .map(BTreeEntry::key)
-                    .collect(Collectors.toList())
-                    .toArray();
+                    .map(BTreeEntry::key).toArray();
         }
 
         Assertions.assertArrayEquals(expected, current, Arrays.toString(expected) + " => " + Arrays.toString(current));
@@ -125,7 +121,7 @@ public class BTreeFunctionalTest {
         return count;
     }
 
-    private <T extends BTreeEntry> List<T> toList(Iterator<T> query) {
+    private <T extends BTreeEntry<?, ?>> List<T> toList(Iterator<T> query) {
         List<T> lst = new ArrayList<>();
         while (query.hasNext()) {
             var value = query.next();

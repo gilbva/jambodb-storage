@@ -12,12 +12,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class BTreeUnitTest {
-    private Random random = new Random();
+    private final Random random = new Random();
 
     @TestFactory
-    public Collection<DynamicTest> testSearch() throws IOException {
+    public Collection<DynamicTest> testSearch() {
         List<DynamicTest> lst = new ArrayList<>();
-        for (int i = 1; i <= 20; i++) {
+        for (int i = 2; i <= 20; i++) {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing search size=" + i, () -> testSearch(size)));
         }
@@ -65,7 +65,7 @@ public class BTreeUnitTest {
     }
 
     @TestFactory
-    public Collection<DynamicTest> testBorrow() throws IOException {
+    public Collection<DynamicTest> testBorrow() {
         List<DynamicTest> lst = new ArrayList<>();
         for (int i = 1; i <= 20; i++) {
             for (int j = 0; j < i; j++) {
@@ -145,7 +145,7 @@ public class BTreeUnitTest {
     }
 
     @TestFactory
-    public Collection<DynamicTest> testMerge() throws IOException {
+    public Collection<DynamicTest> testMerge() {
         List<DynamicTest> lst = new ArrayList<>();
         for (int i = 1; i <= 20; i++) {
             for (int j = 0; j < i; j++) {
@@ -201,9 +201,9 @@ public class BTreeUnitTest {
     }
 
     @TestFactory
-    public Collection<DynamicTest> testMove() throws IOException {
+    public Collection<DynamicTest> testMove() {
         List<DynamicTest> lst = new ArrayList<>();
-        for (int i = 1; i <= 20; i++) {
+        for (int i = 2; i <= 20; i++) {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing move size=" + i, () -> testMove(size)));
         }
@@ -339,9 +339,9 @@ public class BTreeUnitTest {
     }
 
     @TestFactory
-    public Collection<DynamicTest> testInsertPlace() throws IOException {
+    public Collection<DynamicTest> testInsertPlace() {
         List<DynamicTest> lst = new ArrayList<>();
-        for (int i = 1; i <= 20; i++) {
+        for (int i = 2; i <= 20; i++) {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing insertPlace size=" + i, () -> testInsertPlace(size)));
         }
@@ -383,7 +383,7 @@ public class BTreeUnitTest {
     }
 
     @TestFactory
-    public Collection<DynamicTest> testDeletePlace() throws IOException {
+    public Collection<DynamicTest> testDeletePlace() {
         List<DynamicTest> lst = new ArrayList<>();
         for (int i = 1; i <= 20; i++) {
             final int size = i;
@@ -447,9 +447,6 @@ public class BTreeUnitTest {
 
         leafPage.child(0, 1);
         assertTrue(leafPage.isLeaf());
-        assertThrows(IllegalArgumentException.class, () -> btree.getChildPage(leafPage, 0), "getChildPage should throw IllegalArgumentException if called on leaf page");
-        assertThrows(IndexOutOfBoundsException.class, () -> btree.getChildPage(nonLeafPage, 10), "getChildPage should throw IndexOutOfBoundsException if called with and invalid index");
-        assertThrows(IndexOutOfBoundsException.class, () -> btree.getChildPage(nonLeafPage, -1), "getChildPage should throw IndexOutOfBoundsException if called with and invalid index");
     }
 
     private MockBTreePage<String, Integer> fillWithDummyData(MockBTreePage<String, Integer> page, int size) {

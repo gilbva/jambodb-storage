@@ -397,7 +397,6 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param key  the key to search for.
      * @return a result node containing either the node of the given key if found,
      * or the node with the smallest key greater than the given key.
-     * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Result<K, V> search(BTreePage<K, V> page, K key) {
         int p = 0;
@@ -619,9 +618,6 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param index  a valid index at the source page signaling the first element that will be moved.
      */
     void move(BTreePage<K, V> source, BTreePage<K, V> target, int index) {
-        if (index < 0 || index > source.size()) {
-            throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, source.id(), source.size()));
-        }
         int prevSize = target.size();
         int moveSize = source.size() - index;
         target.size(target.size() + moveSize);
@@ -646,9 +642,6 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param parent The parent node where the promoted element will be place.
      */
     void promoteLast(BTreePage<K, V> source, Node<K, V> parent) {
-        if (source.size() <= 0) {
-            throw new IllegalArgumentException(String.format("the page %d is empty", source.id()));
-        }
         insertPlace(parent.page, parent.index);
         parent.page.key(parent.index, source.key(source.size() - 1));
         parent.page.value(parent.index, source.value(source.size() - 1));
@@ -664,15 +657,10 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param target The target page, must be the left child of the parent node.
      */
     void rotateLeft(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) {
-        if (source.size() <= 0) {
-            throw new IllegalArgumentException(String.format("the page %d is empty", source.id()));
-        }
-        if (parent.index < 0 || parent.index >= parent.page.size()) {
-            throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", parent.index, parent.page.id(), parent.page.size()));
-        }
         target.size(target.size() + 1);
         target.key(target.size() - 1, parent.page.key(parent.index));
         target.value(target.size() - 1, parent.page.value(parent.index));
+
         if (!target.isLeaf()) {
             target.child(target.size(), source.child(0));
         }
@@ -691,15 +679,10 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param target The target page, must be the right child of the parent node.
      */
     void rotateRight(Node<K, V> parent, BTreePage<K, V> source, BTreePage<K, V> target) {
-        if (source.size() <= 0) {
-            throw new IllegalArgumentException(String.format("the page %d is empty", source.id()));
-        }
-        if (parent.index < 0 || parent.index >= parent.page.size()) {
-            throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", parent.index, parent.page.id(), parent.page.size()));
-        }
         insertPlace(target, 0);
         target.key(0, parent.page.key(parent.index));
         target.value(0, parent.page.value(parent.index));
+
         if (!target.isLeaf()) {
             target.child(0, source.child(source.size()));
         }
@@ -717,10 +700,6 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param index The index at which the empty spot will be inserted.
      */
     void insertPlace(BTreePage<K, V> page, int index) {
-        if (index < 0 || index > page.size()) {
-            throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
-        }
-
         page.size(page.size() + 1);
         for (int i = page.size(); i > index; i--) {
             if (i < page.size()) {
@@ -741,10 +720,6 @@ public final class BTree<K extends Comparable<K>, V> {
      * @param index The index to be deleted from the given page.
      */
     void deletePlace(BTreePage<K, V> page, int index) {
-        if (index < 0 || index >= page.size()) {
-            throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
-        }
-
         for (int i = index; i < page.size(); i++) {
             if (i < page.size() - 1) {
                 page.key(i, page.key(i + 1));
@@ -769,12 +744,6 @@ public final class BTree<K extends Comparable<K>, V> {
      * @throws IndexOutOfBoundsException if the page parameter is not a leaf page.
      */
     BTreePage<K, V> getChildPage(BTreePage<K, V> page, int index) throws IOException {
-        if (page.isLeaf()) {
-            throw new IllegalArgumentException("getChildPage called on leaf page.");
-        }
-        if (index < 0 || index > page.size()) {
-            throw new IndexOutOfBoundsException(String.format("index %d is out of bounds with respect to the page %d with size %d", index, page.id(), page.size()));
-        }
         return pager.page(page.child(index));
     }
 }

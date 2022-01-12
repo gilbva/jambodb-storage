@@ -4,21 +4,24 @@ import java.util.Arrays;
 
 public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
-    private int id;
+    private final int id;
 
-    private Object[] keys;
+    private final Object[] keys;
 
-    private Object[] values;
+    private final Object[] values;
 
-    private int[] children;
+    private final int[] children;
 
-    private int maxDegree;
+    private final int maxDegree;
 
     private int size;
 
-    private boolean leaf;
+    private final boolean leaf;
 
     public MockBTreePage(int id, int maxDegree, boolean leaf) {
+        if(maxDegree < 2) {
+            throw new IllegalArgumentException("max degree must be at least 2");
+        }
         this.id = id;
         this.maxDegree = maxDegree;
         this.leaf = leaf;
@@ -67,6 +70,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
         return this.size >= (maxDegree / 2);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public K key(int index) {
         return (K) keys[index];
@@ -77,6 +81,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
         keys[index] = key;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public V value(int index) {
         return (V) values[index];
@@ -120,9 +125,7 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
 
     private Object[] getCleared(Object[] array) {
         Object[] result = new Object[size];
-        for (int i = 0; i < result.length; i++) {
-            result[i] = array[i];
-        }
+        System.arraycopy(array, 0, result, 0, result.length);
         return result;
     }
 
