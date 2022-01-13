@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
  * This class is intended to by implemented to access external memory like a single file but the
  * actual implementation could be anything from main memory access to network access, this interface
  * makes no assumptions about it.
+ *
  */
 public interface BlockStorage {
     /**
