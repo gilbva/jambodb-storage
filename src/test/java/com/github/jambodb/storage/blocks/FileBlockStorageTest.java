@@ -1,9 +1,10 @@
 package com.github.jambodb.storage.blocks;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Random;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,7 @@ public class FileBlockStorageTest {
     @Test
     public void testFileBlockStorage() throws IOException {
         var raf = createFile();
-        var storage = new FileBlockStorage(4 * 4096, raf);
+        var storage = new FileBlockStorage(4 * 4096, raf, StandardOpenOption.READ, StandardOpenOption.WRITE);
 
         Assertions.assertThrows(Exception.class, () -> storage.read(0, ByteBuffer.allocate(storage.blockSize())));
         Assertions.assertThrows(Exception.class, () -> storage.write(0, ByteBuffer.allocate(storage.blockSize())));
@@ -27,7 +28,7 @@ public class FileBlockStorageTest {
             Assertions.assertEquals(toWrite, toRead);
         }
 
-        var readStorage = new FileBlockStorage(raf);
+        var readStorage = new FileBlockStorage(raf, StandardOpenOption.READ);
         Assertions.assertEquals(storage.blockCount(), readStorage.blockCount());
         Assertions.assertEquals(storage.blockSize(), readStorage.blockSize());
         for (int i = 0; i < 1000; i++) {
@@ -40,7 +41,7 @@ public class FileBlockStorageTest {
     @Test
     public void testFileBlockStorageWithIntValues() throws IOException {
         var raf = createFile();
-        var storage = new FileBlockStorage(4, raf);
+        var storage = new FileBlockStorage(4, raf, StandardOpenOption.READ, StandardOpenOption.WRITE);
 
         for (int i = 0; i < 10; i++) {
             storage.createBlock();
@@ -52,7 +53,7 @@ public class FileBlockStorageTest {
             Assertions.assertEquals(i, buffer.getInt());
         }
 
-        var readStorage = new FileBlockStorage(raf);
+        var readStorage = new FileBlockStorage(raf, StandardOpenOption.READ);
         Assertions.assertEquals(storage.blockCount(), readStorage.blockCount());
         Assertions.assertEquals(storage.blockSize(), readStorage.blockSize());
         for (int i = 0; i < 10; i++) {
@@ -68,11 +69,7 @@ public class FileBlockStorageTest {
         return ByteBuffer.wrap(arr);
     }
 
-    private RandomAccessFile createFile() throws IOException {
-        File f = File.createTempFile("test-", ".blocks");
-        if (f.exists()) {
-            f.delete();
-        }
-        return new RandomAccessFile(f.getAbsolutePath(), "rw");
+    private Path createFile() throws IOException {
+        return Files.createTempFile("test-", ".blocks");
     }
 }

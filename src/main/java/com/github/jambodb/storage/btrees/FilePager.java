@@ -2,16 +2,15 @@ package com.github.jambodb.storage.btrees;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.blocks.FileBlockStorage;
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.file.*;
 import java.util.*;
 
 public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     private static final int INDEX_BLOCK_SIZE = 4;
 
-    private final File dir;
+    private final Path path;
     private final Serializer<K> keySerializer;
     private final Serializer<V> valueSerializer;
     private final int blockSize;
@@ -20,18 +19,18 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     private int root;
     private int lastPage;
 
-    public FilePager(int maxDegree, File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer, int blockSize) {
+    public FilePager(int maxDegree, Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer, int blockSize) {
         this.maxDegree = maxDegree;
-        this.dir = dir;
+        this.path = path;
         this.map = new HashMap<>();
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
         this.blockSize = blockSize;
     }
 
-    public FilePager(File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
-        this.dir = dir;
-        int[] blocks = readHeader(dir);
+    public FilePager(Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
+        this.path = path;
+        int[] blocks = readHeader();
         if (blocks.length < 4) {
             throw new IOException("Could not read pager header");
         }
@@ -42,7 +41,7 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         this.map = new HashMap<>();
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
-        readPages(dir, keySerializer, valueSerializer);
+        readPages();
     }
 
     public int lastPage() {
@@ -86,17 +85,17 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
 
     @Override
     public void fsync() throws IOException {
-        writeHeader(dir);
-        writePages(dir);
-        cleanPages(dir);
+        writeHeader();
+        writePages();
+        cleanPages();
     }
 
-    private int[] readHeader(File dir) throws IOException {
-        File file = new File(dir, "index.jmb.dat");
-        if (!file.exists()) {
+    private int[] readHeader() throws IOException {
+        Path file = getHeaderPath();
+        if (!Files.exists(file)) {
             return new int[0];
         }
-        BlockStorage blockStorage = new FileBlockStorage(new RandomAccessFile(file, "r"));
+        BlockStorage blockStorage = new FileBlockStorage(file, StandardOpenOption.READ);
         int[] blocks = new int[blockStorage.blockCount()];
         for (int i = 0; i < blocks.length; i++) {
             ByteBuffer buffer = ByteBuffer.allocate(blockStorage.blockSize());
@@ -106,20 +105,18 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         return blocks;
     }
 
-    private void writeHeader(File dir) throws IOException {
-        File file = new File(dir, "index.jmb.dat");
-        if (file.exists() && !file.delete()) {
-            throw new IOException("Could not write file " + file.getAbsolutePath());
+    private void writeHeader() throws IOException {
+        Path file = getHeaderPath();
+        if (Files.exists(file)) {
+            Files.delete(file);
         }
-        if (!file.createNewFile()) {
-            throw new IOException("Could not write file " + file.getAbsolutePath());
-        }
+        Files.createFile(file);
         int[] blocks = new int[4];
         blocks[0] = root;
         blocks[1] = maxDegree;
         blocks[2] = lastPage;
         blocks[3] = blockSize;
-        BlockStorage blockStorage = new FileBlockStorage(INDEX_BLOCK_SIZE, new RandomAccessFile(file, "rw"));
+        BlockStorage blockStorage = new FileBlockStorage(INDEX_BLOCK_SIZE, file, StandardOpenOption.WRITE);
         for (int block : blocks) {
             int index = blockStorage.createBlock() - 1;
             ByteBuffer buffer = ByteBuffer.allocate(INDEX_BLOCK_SIZE);
@@ -129,42 +126,44 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         }
     }
 
-    private void readPages(File dir, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+    private Path getHeaderPath() {
+        return Paths.get(path.toUri()).resolve("index.jmb.dat");
+    }
+
+    private void readPages() {
         for (int i = 0; i < lastPage; i++) {
             try {
-                FileBTreePage<K, V> page = new FileBTreePage<>(i, dir, keySerializer, valueSerializer);
+                FileBTreePage<K, V> page = new FileBTreePage<>(i, path, keySerializer, valueSerializer);
                 map.put(i, page);
             } catch (IOException ignored) {
             }
         }
     }
 
-    private void writePages(File dir) throws IOException {
+    private void writePages() throws IOException {
         Collection<FileBTreePage<K, V>> pages = map.values();
         for (FileBTreePage<K, V> page : pages) {
-            page.fsync(dir);
+            page.fsync(path);
         }
     }
 
-    private void cleanPages(File dir) {
+    private void cleanPages() throws IOException {
         List<Integer> ids = new ArrayList<>();
         map.forEach((key, value) -> {
             if (value == null) {
                 ids.add(key);
             }
         });
-        File[] files = dir.listFiles((fileDir, name) -> {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path, file -> {
             for (int id : ids) {
-                if (name.endsWith(String.format("-%d.jmb.dat", id))) {
+                if (file.getFileName().toString().endsWith(String.format("-%d.jmb.dat", id))) {
                     return true;
                 }
             }
             return false;
-        });
-        if (files != null) {
-            for (File file : files) {
-                //noinspection ResultOfMethodCallIgnored
-                file.delete();
+        })) {
+            for (Path entry : stream) {
+                Files.delete(entry);
             }
         }
     }

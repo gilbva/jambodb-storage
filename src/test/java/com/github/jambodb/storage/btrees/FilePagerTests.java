@@ -1,7 +1,8 @@
 package com.github.jambodb.storage.btrees;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -18,11 +19,9 @@ public class FilePagerTests {
 
     @Test
     public void testFsync() throws IOException {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "jambodb.btree-pager-test");
-        //noinspection ResultOfMethodCallIgnored
-        dir.mkdir();
+        Path path = Files.createTempDirectory("jambodb.btree-pager-test");
         FilePager<String, MockObject> pager
-            = new FilePager<>(2, dir, stringSerializer, mockSerializer, 8 * 1024);
+            = new FilePager<>(2, path, stringSerializer, mockSerializer, 8 * 1024);
         for (int i = 0; i < 10; i++) {
             MockObject mockObject = createMockObject(i);
             FileBTreePage<String, MockObject> page = pager.create(i % 2 != 0);
@@ -31,7 +30,7 @@ public class FilePagerTests {
         }
         pager.fsync();
 
-        FilePager<String, MockObject> readPager = new FilePager<>(dir, stringSerializer, mockSerializer);
+        FilePager<String, MockObject> readPager = new FilePager<>(path, stringSerializer, mockSerializer);
         assertEquals(pager.blockSize(), readPager.blockSize());
         assertEquals(pager.lastPage(), readPager.lastPage());
         for (int i = 2; i < 6; i++) {

@@ -1,28 +1,37 @@
 package com.github.jambodb.storage.blocks;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
 
 public class FileBlockStorage implements BlockStorage {
     private static final int HEADER_SIZE = 8;
-    private final RandomAccessFile raf;
-    private final FileChannel channel;
+    private final SeekableByteChannel channel;
     private int blockSize;
     private int blockCount;
 
-    public FileBlockStorage(int blockSize, RandomAccessFile raf) throws IOException {
+    public FileBlockStorage(int blockSize, SeekableByteChannel channel) throws IOException {
         this.blockSize = blockSize;
         this.blockCount = 0;
-        this.raf = raf;
-        this.raf.setLength(0);
-        this.channel = raf.getChannel();
+        this.channel = channel;
     }
 
-    public FileBlockStorage(RandomAccessFile raf) throws IOException {
-        this.raf = raf;
-        this.channel = raf.getChannel();
+    public FileBlockStorage(int blockSize, Path path, OpenOption... options) throws IOException {
+        this.blockSize = blockSize;
+        this.blockCount = 0;
+        this.channel = Files.newByteChannel(path, options);
+    }
+
+    public FileBlockStorage(SeekableByteChannel channel) throws IOException {
+        this.channel = channel;
+        readHeader();
+    }
+
+    public FileBlockStorage(Path path, OpenOption... options) throws IOException {
+        this.channel = Files.newByteChannel(path, options);
         readHeader();
     }
 
