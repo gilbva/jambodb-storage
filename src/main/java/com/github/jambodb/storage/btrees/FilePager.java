@@ -4,7 +4,10 @@ import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.blocks.FileBlockStorage;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 
 public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
@@ -16,6 +19,7 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     private final int blockSize;
     private final int maxDegree;
     private final Map<Integer, FileBTreePage<K, V>> map;
+    private final List<Integer> deletedPages;
     private int root;
     private int lastPage;
 
@@ -26,6 +30,7 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
         this.blockSize = blockSize;
+        deletedPages = new LinkedList<>();
     }
 
     public FilePager(Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
@@ -38,6 +43,10 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         maxDegree = blocks[1];
         lastPage = blocks[2];
         blockSize = blocks[3];
+        deletedPages = new LinkedList<>();
+        for (int i = 4; i < blocks.length; i++) {
+            deletedPages.add(blocks[i]);
+        }
         this.map = new HashMap<>();
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
@@ -70,14 +79,21 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     @Override
     public FileBTreePage<K, V> create(boolean leaf) {
         FileBTreePage<K, V> page
-            = new FileBTreePage<>(lastPage++, leaf, maxDegree, keySerializer, valueSerializer, blockSize);
+            = new FileBTreePage<>(lastPage, leaf, maxDegree, keySerializer, valueSerializer, blockSize);
         map.put(lastPage, page);
+        if (deletedPages.contains(lastPage)) {
+            deletedPages.remove(lastPage);
+        }
+        lastPage++;
         return page;
     }
 
     @Override
     public void remove(int id) {
         map.remove(id);
+        if (!deletedPages.contains(id)) {
+            deletedPages.add(id);
+        }
         if (lastPage - id == 1) {
             lastPage--;
         }
@@ -87,7 +103,6 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     public void fsync() throws IOException {
         writeHeader();
         writePages();
-        cleanPages();
     }
 
     private int[] readHeader() throws IOException {
@@ -111,11 +126,15 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
             Files.delete(file);
         }
         Files.createFile(file);
-        int[] blocks = new int[4];
+        int[] blocks = new int[4 + deletedPages.size()];
         blocks[0] = root;
         blocks[1] = maxDegree;
         blocks[2] = lastPage;
         blocks[3] = blockSize;
+        int blockIndex = 4;
+        for (int page : deletedPages) {
+            blocks[blockIndex++] = page;
+        }
         BlockStorage blockStorage = new FileBlockStorage(INDEX_BLOCK_SIZE, file, StandardOpenOption.WRITE);
         for (int block : blocks) {
             int index = blockStorage.createBlock() - 1;
@@ -144,27 +163,6 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         Collection<FileBTreePage<K, V>> pages = map.values();
         for (FileBTreePage<K, V> page : pages) {
             page.fsync(path);
-        }
-    }
-
-    private void cleanPages() throws IOException {
-        List<Integer> ids = new ArrayList<>();
-        map.forEach((key, value) -> {
-            if (value == null) {
-                ids.add(key);
-            }
-        });
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path, file -> {
-            for (int id : ids) {
-                if (file.getFileName().toString().endsWith(String.format("-%d.jmb.dat", id))) {
-                    return true;
-                }
-            }
-            return false;
-        })) {
-            for (Path entry : stream) {
-                Files.delete(entry);
-            }
         }
     }
 }
