@@ -3,6 +3,10 @@ package com.github.jambodb.storage.btrees;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import com.github.jambodb.storage.btrees.mock.MockObject;
+import com.github.jambodb.storage.btrees.mock.MockObjectSerializer;
+import com.github.jambodb.storage.btrees.mock.StringSerializer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;

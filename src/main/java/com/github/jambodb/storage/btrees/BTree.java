@@ -100,6 +100,19 @@ public final class BTree<K extends Comparable<K>, V> {
     public BTree(Pager<BTreePage<K, V>> pager) throws IOException {
         this.pager = pager;
         this.root = pager.page(pager.root());
+        if(this.root == null) {
+            this.root = pager.create(true);
+            pager.root(this.root.id());
+        }
+    }
+
+    /**
+     * Gets the underlying pager for this BTree.
+     *
+     * @return the underlying pager.
+     */
+    public Pager<BTreePage<K, V>> getPager() {
+        return pager;
     }
 
     /**
