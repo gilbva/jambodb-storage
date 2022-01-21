@@ -12,53 +12,50 @@ import java.util.*;
 
 public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     private static final int INDEX_BLOCK_SIZE = 4;
+    private static final int BLOCK_SIZE = 8 * 1024;
+    private static final int MAX_CACHE = 10;
 
     private final Path path;
     private final Serializer<K> keySerializer;
     private final Serializer<V> valueSerializer;
-    private final int blockSize;
     private final int maxDegree;
     private final Map<Integer, FileBTreePage<K, V>> map;
+    private final Queue<Integer> cachePages;
     private final List<Integer> deletedPages;
     private int root;
     private int lastPage;
 
-    public FilePager(int maxDegree, Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer, int blockSize) {
+    public FilePager(int maxDegree, Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
         this.maxDegree = maxDegree;
         this.path = path;
         this.map = new HashMap<>();
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
-        this.blockSize = blockSize;
+        cachePages = new LinkedList<>();
         deletedPages = new LinkedList<>();
     }
 
     public FilePager(Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
         this.path = path;
         int[] blocks = readHeader();
-        if (blocks.length < 4) {
+        if (blocks.length < 3) {
             throw new IOException("Could not read pager header");
         }
         root = blocks[0];
         maxDegree = blocks[1];
         lastPage = blocks[2];
-        blockSize = blocks[3];
+        cachePages = new LinkedList<>();
         deletedPages = new LinkedList<>();
-        for (int i = 4; i < blocks.length; i++) {
+        for (int i = 3; i < blocks.length; i++) {
             deletedPages.add(blocks[i]);
         }
         this.map = new HashMap<>();
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
-        readPages();
     }
 
     public int lastPage() {
         return lastPage;
-    }
-
-    public int blockSize() {
-        return blockSize;
     }
 
     @Override
@@ -72,14 +69,29 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     }
 
     @Override
-    public FileBTreePage<K, V> page(int id) {
+    public FileBTreePage<K, V> page(int id) throws IOException {
+        if (map.get(id) == null && !deletedPages.contains(id)) {
+            FileBTreePage<K, V> page = new FileBTreePage<>(id, path, keySerializer, valueSerializer);
+            map.put(id, page);
+            addCache(id);
+        }
         return map.get(id);
+    }
+
+    private void addCache(int id) {
+        if (!cachePages.contains(id)) {
+            cachePages.add(id);
+        }
+        while (cachePages.size() > MAX_CACHE) {
+            Integer cacheId = cachePages.poll();
+            map.remove(cacheId);
+        }
     }
 
     @Override
     public FileBTreePage<K, V> create(boolean leaf) {
         FileBTreePage<K, V> page
-            = new FileBTreePage<>(lastPage, leaf, maxDegree, keySerializer, valueSerializer, blockSize);
+            = new FileBTreePage<>(lastPage, leaf, maxDegree, keySerializer, valueSerializer, BLOCK_SIZE);
         map.put(lastPage, page);
         if (deletedPages.contains(lastPage)) {
             deletedPages.remove(lastPage);
@@ -103,6 +115,12 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     public void fsync() throws IOException {
         writeHeader();
         writePages();
+        clearCache();
+    }
+
+    private void clearCache() {
+        map.clear();
+        cachePages.clear();
     }
 
     private int[] readHeader() throws IOException {
@@ -126,12 +144,11 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
             Files.delete(file);
         }
         Files.createFile(file);
-        int[] blocks = new int[4 + deletedPages.size()];
+        int[] blocks = new int[3 + deletedPages.size()];
         blocks[0] = root;
         blocks[1] = maxDegree;
         blocks[2] = lastPage;
-        blocks[3] = blockSize;
-        int blockIndex = 4;
+        int blockIndex = 3;
         for (int page : deletedPages) {
             blocks[blockIndex++] = page;
         }
@@ -149,20 +166,12 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         return Paths.get(path.toUri()).resolve("index.jmb.dat");
     }
 
-    private void readPages() {
-        for (int i = 0; i < lastPage; i++) {
-            try {
-                FileBTreePage<K, V> page = new FileBTreePage<>(i, path, keySerializer, valueSerializer);
-                map.put(i, page);
-            } catch (IOException ignored) {
-            }
-        }
-    }
-
     private void writePages() throws IOException {
         Collection<FileBTreePage<K, V>> pages = map.values();
         for (FileBTreePage<K, V> page : pages) {
-            page.fsync(path);
+            if (!cachePages.contains(page.id())) {
+                page.fsync(path);
+            }
         }
     }
 }

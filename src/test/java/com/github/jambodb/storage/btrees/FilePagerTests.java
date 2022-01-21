@@ -23,7 +23,7 @@ public class FilePagerTests {
     public void testFsync() throws IOException {
         Path path = Files.createTempDirectory("jambodb.btree-pager-test");
         FilePager<String, MockObject> pager
-            = new FilePager<>(2, path, stringSerializer, mockSerializer, 8 * 1024);
+            = new FilePager<>(2, path, stringSerializer, mockSerializer);
         int totalPages = 10;
         for (int i = 0; i < totalPages; i++) {
             MockObject mockObject = createMockObject(i);
@@ -38,7 +38,6 @@ public class FilePagerTests {
         pager.fsync();
 
         FilePager<String, MockObject> readPager = new FilePager<>(path, stringSerializer, mockSerializer);
-        assertEquals(pager.blockSize(), readPager.blockSize());
         assertEquals(pager.lastPage(), readPager.lastPage());
         for (int i = 0; i < totalPages; i++) {
             FileBTreePage<String, MockObject> page = readPager.page(i);
