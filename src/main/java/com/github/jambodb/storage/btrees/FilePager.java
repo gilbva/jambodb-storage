@@ -84,7 +84,10 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
         }
         while (cachePages.size() > MAX_CACHE) {
             Integer cacheId = cachePages.poll();
-            map.remove(cacheId);
+            FileBTreePage<K, V> page = map.get(cacheId);
+            if (page == null || !page.dirty()) {
+                map.remove(cacheId);
+            }
         }
     }
 
@@ -103,6 +106,7 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     @Override
     public void remove(int id) {
         map.remove(id);
+        cachePages.remove(id);
         if (!deletedPages.contains(id)) {
             deletedPages.add(id);
         }
@@ -169,7 +173,7 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     private void writePages() throws IOException {
         Collection<FileBTreePage<K, V>> pages = map.values();
         for (FileBTreePage<K, V> page : pages) {
-            if (!cachePages.contains(page.id())) {
+            if (page.dirty() || !cachePages.contains(page.id())) {
                 page.fsync(path);
             }
         }

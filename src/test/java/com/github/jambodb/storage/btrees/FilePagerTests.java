@@ -45,6 +45,7 @@ public class FilePagerTests {
                 assertNull(page);
             } else {
                 assertNotNull(page);
+                assertFalse(page.dirty());
                 if (i % 2 != 0) {
                     assertTrue(page.isLeaf());
                 } else {

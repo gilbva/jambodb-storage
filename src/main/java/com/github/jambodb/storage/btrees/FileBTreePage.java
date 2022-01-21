@@ -24,6 +24,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     private final int[] children;
 
     private int size;
+    private boolean dirty;
 
     public FileBTreePage(int id, boolean leaf, int maxDegree,
                          Serializer<K> keySerializer, Serializer<V> valueSerializer, int blockSize) {
@@ -38,6 +39,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
         this.blockSize = blockSize;
+        dirty = true;
     }
 
     public FileBTreePage(int id, Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
@@ -61,6 +63,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         //noinspection unchecked
         readObjects(path, "v", values, (Serializer<Object>) valueSerializer);
         readChildren(path);
+        dirty = false;
     }
 
     @Override
@@ -73,6 +76,10 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         return size;
     }
 
+    public boolean dirty() {
+        return dirty;
+    }
+
     @Override
     public void size(int size) {
         this.size = size;
@@ -81,6 +88,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             keys[i] = null;
             values[i] = null;
         }
+        dirty = true;
     }
 
     @Override
@@ -118,6 +126,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             keys[index] = key;
         }
         expandSize(index);
+        dirty = true;
     }
 
     @Override
@@ -135,6 +144,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             values[index] = value;
         }
         expandSize(index);
+        dirty = true;
     }
 
     @Override
@@ -151,6 +161,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             children[index] = child;
         }
         expandSize(index);
+        dirty = true;
     }
 
     private void expandSize(int index) {
