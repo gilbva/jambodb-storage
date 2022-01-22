@@ -1,72 +1,23 @@
 package com.github.jambodb.storage.btrees;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.TestFactory;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
-public class BTreeFunctionalTest {
-    public static final Logger LOG = Logger.getLogger(BTreeFunctionalTest.class.getName());
+public class BTreeTestBase {
+    public static final Logger LOG = Logger.getLogger(BTreeTestBase.class.getName());
 
-    @TestFactory
-    public Collection<DynamicTest> testBTree() {
-        List<DynamicTest> lst = new ArrayList<>();
-        for (int md = 2; md < 100; md += 3) {
-            final int maxDegree = md;
-            for (int i = 0; i < 100; i++) {
-                final int size = i;
-                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
-            }
-        }
-
-        for (int md = 100; md < 300; md += 100) {
-            final int maxDegree = md;
-            for (int i = 10000; i < 100000; i += 10000) {
-                final int size = i;
-                lst.add(DynamicTest.dynamicTest("testing btree md=" + maxDegree + " size=" + size, () -> testBTree(maxDegree, size)));
-            }
-        }
-        return lst;
-    }
-
-    private void testBTree(int md, int size) throws IOException {
-        var expectedStiTree = new TreeMap<String, Integer>();
-        var expectedItsTree = new TreeMap<Integer, String>();
-
-        var strToInt = new BTree<>(new MockPager<String, Integer>(md));
-        var intToStr = new BTree<>(new MockPager<Integer, String>(md));
-
-        for (int i = 0; i < size; i++) {
-            var str = UUID.randomUUID().toString().substring(0, 8);
-
-            expectedStiTree.put(str, i);
-            expectedItsTree.put(i, str);
-        }
-
-        var strQueries = Arrays.asList(new String[][]{
-                {"a", "z"},
-                {"0", "9"}
-        });
-
-        var intQueries = Arrays.asList(new Integer[][]{
-                {0, 5},
-                {6, 9}
-        });
-
-        testBTree(expectedStiTree, strToInt, strQueries);
-        testBTree(expectedItsTree, intToStr, intQueries);
-    }
-
-    private <K extends Comparable<K>, V> void testBTree(TreeMap<K, V> tree, BTree<K, V> bTree, List<K[]> queries) throws IOException {
+    protected <K extends Comparable<K>, V> void testBTree(TreeMap<K, V> tree, BTree<K, V> bTree, List<K[]> queries) throws IOException {
+        var pager = bTree.getPager();
         for (var entry : tree.entrySet()) {
             bTree.put(entry.getKey(), entry.getValue());
+            Assertions.assertNotNull(entry.getKey());
             Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
         }
+        pager.fsync();
 
         for (var entry : tree.entrySet()) {
             Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
@@ -76,6 +27,7 @@ public class BTreeFunctionalTest {
             bTree.remove(key);
             Assertions.assertNull(bTree.get(key));
         }
+        pager.fsync();
 
         for (var key : tree.keySet()) {
             Assertions.assertNull(bTree.get(key));
@@ -85,6 +37,7 @@ public class BTreeFunctionalTest {
             bTree.put(entry.getKey(), entry.getValue());
             Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
         }
+        pager.fsync();
 
         assertQuery(tree, bTree, null, null);
         for (var query : queries) {
@@ -110,15 +63,6 @@ public class BTreeFunctionalTest {
         }
 
         Assertions.assertArrayEquals(expected, current, Arrays.toString(expected) + " => " + Arrays.toString(current));
-    }
-
-    private int count(Iterator<?> query) {
-        int count = 0;
-        while (query.hasNext()) {
-            query.next();
-            count++;
-        }
-        return count;
     }
 
     private <T extends BTreeEntry<?, ?>> List<T> toList(Iterator<T> query) {

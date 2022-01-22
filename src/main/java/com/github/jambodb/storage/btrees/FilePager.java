@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 
-public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
+public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     private static final int INDEX_BLOCK_SIZE = 4;
 
     private final Path path;

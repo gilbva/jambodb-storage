@@ -1,4 +1,6 @@
-package com.github.jambodb.storage.btrees;
+package com.github.jambodb.storage.btrees.mock;
+
+import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

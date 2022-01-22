@@ -1,4 +1,4 @@
-package com.github.jambodb.storage.btrees;
+package com.github.jambodb.storage.btrees.mock;
 
 import java.util.Objects;
 
