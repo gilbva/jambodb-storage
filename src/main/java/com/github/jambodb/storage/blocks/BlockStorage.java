@@ -1,5 +1,6 @@
 package com.github.jambodb.storage.blocks;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -12,7 +13,7 @@ import java.nio.ByteBuffer;
  * makes no assumptions about it.
  *
  */
-public interface BlockStorage {
+public interface BlockStorage extends Closeable {
     /**
      * Gets the size in bytes of the blocks handled by this storage.
      * (All blocks in this storage are of the same size.)

@@ -6,6 +6,7 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 public class FileBlockStorage implements BlockStorage {
     private static final int HEADER_SIZE = 8;
@@ -13,16 +14,10 @@ public class FileBlockStorage implements BlockStorage {
     private int blockSize;
     private int blockCount;
 
-    public FileBlockStorage(int blockSize, SeekableByteChannel channel) throws IOException {
+    public FileBlockStorage(int blockSize, SeekableByteChannel channel) {
         this.blockSize = blockSize;
         this.blockCount = 0;
         this.channel = channel;
-    }
-
-    public FileBlockStorage(int blockSize, Path path, OpenOption... options) throws IOException {
-        this.blockSize = blockSize;
-        this.blockCount = 0;
-        this.channel = Files.newByteChannel(path, options);
     }
 
     public FileBlockStorage(SeekableByteChannel channel) throws IOException {
@@ -30,9 +25,22 @@ public class FileBlockStorage implements BlockStorage {
         readHeader();
     }
 
-    public FileBlockStorage(Path path, OpenOption... options) throws IOException {
-        this.channel = Files.newByteChannel(path, options);
-        readHeader();
+    public static BlockStorage writeable(int blockSize, Path path) throws IOException {
+        OpenOption[] options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE};
+        SeekableByteChannel channel = Files.newByteChannel(path, options);
+        return new FileBlockStorage(blockSize, channel);
+    }
+
+    public static BlockStorage readable(Path path) throws IOException {
+        OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
+        SeekableByteChannel channel = Files.newByteChannel(path, options);
+        return new FileBlockStorage(channel);
+    }
+
+    public static BlockStorage readWrite(int blockSize, Path path) throws IOException {
+        OpenOption[] options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
+        SeekableByteChannel channel = Files.newByteChannel(path, options);
+        return new FileBlockStorage(blockSize, channel);
     }
 
     @Override
@@ -97,5 +105,10 @@ public class FileBlockStorage implements BlockStorage {
         buffer.flip();
         blockSize = buffer.getInt();
         blockCount = buffer.getInt();
+    }
+
+    @Override
+    public void close() throws IOException {
+        channel.close();
     }
 }
