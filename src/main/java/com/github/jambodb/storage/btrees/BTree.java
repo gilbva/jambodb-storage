@@ -19,6 +19,12 @@ public final class BTree<K extends Comparable<K>, V> {
     /**
      * This class holds a reference to a particular point in the tree,
      * a node (or cell) is located by its page and its index within that page.
+     * While the class is mainly for internal use only, it implements the
+     * BTreeEntry interface which is the interface used to gain access to a
+     * particular element in the tree from the outside. Along with the convenient access
+     * to the key and value of the node, the class offer also some utility
+     * methods to test if the node is off-page, to provide access to the child of the
+     * node, and to test if a particular key is less or greater than the key of this node.
      *
      * @param <K> The type for the key.
      * @param <V> The type for the value.
@@ -51,15 +57,38 @@ public final class BTree<K extends Comparable<K>, V> {
             return String.format("%s=%s", key(), value());
         }
 
+        /**
+         * Determines if this node is off-page, meaning that
+         * his index is equal or greater than the size of the page.
+         *
+         * @return true if the node is outside the page, false if
+         * the node points to an element inside the page bounds.
+         */
         public boolean isOffPage() {
             return index >= page.size();
         }
 
-        private boolean lesserThan(K key) {
+        /**
+         * Determines if the key of this node is less than
+         * the given key.
+         *
+         * @param key The key to compare with.
+         * @return true if this node's key is less than the one given.
+         * false otherwise.
+         */
+        public boolean lesserThan(K key) {
             return key().compareTo(key) < 0;
         }
 
-        private boolean greaterThan(K key) {
+        /**
+         * Determines if the key of this node is greater than
+         * the given key.
+         *
+         * @param key The key to compare with.
+         * @return true if this node's key is greater than the one given.
+         * false otherwise.
+         */
+        public boolean greaterThan(K key) {
             return key().compareTo(key) > 0;
         }
     }
