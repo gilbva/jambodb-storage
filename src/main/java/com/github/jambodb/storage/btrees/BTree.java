@@ -48,6 +48,11 @@ public final class BTree<K extends Comparable<K>, V> {
             return page.value(index);
         }
 
+        /**
+         * Gets the id of the child for this element.
+         *
+         * @return the id of the child stored in the element pointed by this node.
+         */
         public int child() {
             return page.child(index);
         }
