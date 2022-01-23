@@ -16,7 +16,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     private final SerializableList<V> values;
 
     private int size;
-    private transient boolean dirty;
+    private boolean dirty;
+    private boolean deleted;
 
     public FileBTreePage(int id, boolean leaf, int maxDegree,
                          Serializer<K> keySerializer, Serializer<V> valueSerializer) {
@@ -29,17 +30,23 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         Arrays.fill(children, -1);
         size = 0;
         dirty = true;
+        deleted = true;
     }
 
     public static <K, V> FileBTreePage<K, V> read(int id, BlockStorage blockStorage,
                                                   Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(blockStorage.blockSize());
-        blockStorage.read(0, buffer);
+        blockStorage.read(storageId(id), buffer);
+        boolean deleted = buffer.getInt() == 1;
+        if (deleted) {
+            return null;
+        }
         boolean leaf = buffer.getInt() == 1;
         int maxDegree = buffer.getInt();
         FileBTreePage<K, V> page = new FileBTreePage<>(id, leaf, maxDegree, keySerializer, valueSerializer);
         page.size = buffer.getInt();
         page.dirty = false;
+        page.deleted = false;
         // children
         int childrenSize = buffer.getInt();
         for (int i = 0; i < childrenSize; i++) {
@@ -78,13 +85,20 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         return dirty;
     }
 
+    public void deleted(boolean deleted) {
+        dirty = this.deleted != deleted;
+        this.deleted = deleted;
+    }
+
     @Override
     public void size(int size) {
-        this.size = size;
-        for (int i = size; i <= maxDegree; i++) {
-            children[i + 1] = -1;
+        dirty = this.size != size;
+        if (dirty) {
+            this.size = size;
+            for (int i = size; i <= maxDegree; i++) {
+                children[i + 1] = -1;
+            }
         }
-        dirty = true;
     }
 
     @Override
@@ -141,11 +155,11 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void child(int index, int child) {
+        expandSize(index);
         if (index < children.length) {
             children[index] = child;
+            dirty = true;
         }
-        expandSize(index);
-        dirty = true;
     }
 
     private void expandSize(int index) {
@@ -156,6 +170,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     public void fsync(BlockStorage blockStorage) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(blockStorage.blockSize());
+        buffer.putInt(deleted ? 1 : 0);
         buffer.putInt(leaf ? 1 : 0);
         buffer.putInt(maxDegree);
         buffer.putInt(size);
@@ -183,8 +198,12 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         int index;
         do {
             index = blockStorage.createBlock() - 1;
-        } while (index < id);
+        } while (index < storageId(id));
         buffer.flip();
         blockStorage.write(index, buffer);
+    }
+
+    private static int storageId(int id) {
+        return id + 1;
     }
 }

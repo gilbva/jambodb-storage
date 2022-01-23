@@ -91,15 +91,20 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
             = new FileBTreePage<>(header.lastPage(), leaf, header.maxDegree(), keySerializer, valueSerializer);
         map.put(header.lastPage(), page);
         header.removeDeletedPage(header.lastPage());
+        page.deleted(false);
         header.incLastPage();
         return page;
     }
 
     @Override
-    public void remove(int id) {
+    public void remove(int id) throws IOException {
         map.remove(id);
         cachePages.remove(id);
         header.addDeletedPage(id);
+        FileBTreePage<K, V> page = page(id);
+        if (page != null) {
+            page.deleted(true);
+        }
         if (header.lastPage() - id == 1) {
             header.incLastPage(-1);
         }

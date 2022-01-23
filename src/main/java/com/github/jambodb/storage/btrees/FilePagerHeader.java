@@ -24,7 +24,13 @@ public class FilePagerHeader {
         int root = buffer.getInt();
         int maxDegree = buffer.getInt();
         int lastPage = buffer.getInt();
-        return new FilePagerHeader(root, maxDegree, lastPage);
+        FilePagerHeader header = new FilePagerHeader(root, maxDegree, lastPage);
+        int deletedSize = buffer.getInt();
+        for (int i = 0; i < deletedSize; i++) {
+            int deletedId = buffer.getInt();
+            header.deletedPages().add(deletedId);
+        }
+        return header;
     }
 
     public int root() {
@@ -75,6 +81,10 @@ public class FilePagerHeader {
         buffer.putInt(root);
         buffer.putInt(maxDegree);
         buffer.putInt(lastPage);
+        buffer.putInt(deletedPages().size());
+        for (int deletedId : deletedPages) {
+            buffer.putInt(deletedId);
+        }
         buffer.flip();
         blockStorage.createBlock();
         blockStorage.write(0, buffer);
