@@ -1,17 +1,19 @@
 package com.github.jambodb.storage.btrees;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
-import com.github.jambodb.storage.utils.SerializableWrapperList;
+import com.github.jambodb.storage.utils.SerializableList;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Iterator;
 
 public class FileBTreePage<K, V> implements BTreePage<K, V> {
     private final int id;
     private final boolean leaf;
     private final int maxDegree;
     private final int[] children;
-    private final SerializableWrapperList<K> keys;
-    private final SerializableWrapperList<V> values;
+    private final SerializableList<K> keys;
+    private final SerializableList<V> values;
 
     private int size;
     private transient boolean dirty;
@@ -21,8 +23,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         this.id = id;
         this.leaf = leaf;
         this.maxDegree = maxDegree;
-        keys = new SerializableWrapperList<>(keySerializer);
-        values = new SerializableWrapperList<>(valueSerializer);
+        keys = new SerializableList<>(keySerializer);
+        values = new SerializableList<>(valueSerializer);
         children = new int[maxDegree + 2];
         Arrays.fill(children, -1);
         size = 0;
@@ -31,10 +33,34 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     public static <K, V> FileBTreePage<K, V> read(int id, BlockStorage blockStorage,
                                                   Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
-        FileBTreePage<K, V> page = SerializerUtils.read(blockStorage, id + 1, FileBTreePage.class);
-        page.keys.sync(keySerializer);
-        page.values.sync(valueSerializer);
+        ByteBuffer buffer = ByteBuffer.allocate(blockStorage.blockSize());
+        blockStorage.read(0, buffer);
+        boolean leaf = buffer.getInt() == 1;
+        int maxDegree = buffer.getInt();
+        FileBTreePage<K, V> page = new FileBTreePage<>(id, leaf, maxDegree, keySerializer, valueSerializer);
+        page.size = buffer.getInt();
         page.dirty = false;
+        // children
+        int childrenSize = buffer.getInt();
+        for (int i = 0; i < childrenSize; i++) {
+            page.children[i] = buffer.getInt();
+        }
+        // keys
+        int keysSize = buffer.getInt();
+        for (int i = 0; i < keysSize; i++) {
+            int nextKeySize = buffer.getInt();
+            byte[] keysBytes = new byte[nextKeySize];
+            buffer.get(keysBytes);
+            page.keys.add(keysBytes);
+        }
+        // values
+        int valuesSize = buffer.getInt();
+        for (int i = 0; i < valuesSize; i++) {
+            int nextValueSize = buffer.getInt();
+            byte[] valuesBytes = new byte[nextValueSize];
+            buffer.get(valuesBytes);
+            page.values.add(valuesBytes);
+        }
         return page;
     }
 
@@ -129,13 +155,36 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     public void fsync(BlockStorage blockStorage) throws IOException {
-        keys.prepare(blockStorage.blockSize());
-        values.prepare(blockStorage.blockSize());
+        ByteBuffer buffer = ByteBuffer.allocate(blockStorage.blockSize());
+        buffer.putInt(leaf ? 1 : 0);
+        buffer.putInt(maxDegree);
+        buffer.putInt(size);
+        // children
+        buffer.putInt(children.length);
+        for (int child : children) {
+            buffer.putInt(child);
+        }
+        // keys
+        buffer.putInt(keys.size());
+        Iterator<byte[]> keysBytesIterator = keys.bytesIterator();
+        while (keysBytesIterator.hasNext()) {
+            byte[] bytes = keysBytesIterator.next();
+            buffer.putInt(bytes.length);
+            buffer.put(bytes);
+        }
+        // values
+        buffer.putInt(values.size());
+        Iterator<byte[]> valuesBytesIterator = values.bytesIterator();
+        while (valuesBytesIterator.hasNext()) {
+            byte[] bytes = valuesBytesIterator.next();
+            buffer.putInt(bytes.length);
+            buffer.put(bytes);
+        }
         int index;
-        int storageId = id + 1;
         do {
             index = blockStorage.createBlock() - 1;
-        } while (index < storageId);
-        SerializerUtils.write(blockStorage, storageId, this);
+        } while (index < id);
+        buffer.flip();
+        blockStorage.write(index, buffer);
     }
 }

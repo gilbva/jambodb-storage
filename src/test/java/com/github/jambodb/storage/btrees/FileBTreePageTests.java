@@ -38,13 +38,15 @@ public class FileBTreePageTests {
         btree.value(0, mockObject);
         Path path = Files.createTempFile("jambodb.btree", "-test");
         Files.deleteIfExists(path);
-        BlockStorage blockStorage = FileBlockStorage.writeable(BLOCK_SIZE, path);
-        btree.fsync(blockStorage);
+        try (BlockStorage blockStorage = FileBlockStorage.writeable(BLOCK_SIZE, path)) {
+            btree.fsync(blockStorage);
+        }
 
-        blockStorage = FileBlockStorage.readable(path);
-        FileBTreePage<String, MockObject> readBtree
-            = FileBTreePage.read(0, blockStorage, stringSerializer, mockSerializer);
-        assertEquals(mockObject.getStringValue(), readBtree.key(0).trim());
-        assertEquals(mockObject, readBtree.value(0));
+        try (BlockStorage blockStorage = FileBlockStorage.readable(path)) {
+            FileBTreePage<String, MockObject> readBtree
+                = FileBTreePage.read(0, blockStorage, stringSerializer, mockSerializer);
+            assertEquals(mockObject.getStringValue(), readBtree.key(0).trim());
+            assertEquals(mockObject, readBtree.value(0));
+        }
     }
 }

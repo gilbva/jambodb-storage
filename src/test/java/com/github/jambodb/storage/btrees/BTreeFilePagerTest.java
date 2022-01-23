@@ -1,13 +1,14 @@
 package com.github.jambodb.storage.btrees;
 
 import com.github.jambodb.storage.btrees.mock.StringSerializer;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.Arrays;
+import java.util.TreeMap;
+import java.util.UUID;
 import java.util.logging.Logger;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class BTreeFilePagerTest extends BTreeTestBase {
     public static final Logger LOG = Logger.getLogger(BTreeFilePagerTest.class.getName());
@@ -23,8 +24,8 @@ public class BTreeFilePagerTest extends BTreeTestBase {
     public void testBTreeFile() throws IOException {
         var expected = new TreeMap<String, String>();
         var path = Files.createTempDirectory("btree-test.data");
-        var pager = new FilePager<>(4, path, STRING_SERIALIZER, STRING_SERIALIZER, 4 * 1024);
-        var btree = new BTree<>(pager);
+        var pager = new FilePager<>(4, path, STRING_SERIALIZER, STRING_SERIALIZER);
+        BTree<String, String> btree = new BTree<>(pager);
         pager.fsync();
 
         for (int i = 0; i < 100; i++) {
@@ -34,8 +35,8 @@ public class BTreeFilePagerTest extends BTreeTestBase {
         }
 
         var strQueries = Arrays.asList(new String[][]{
-                {"a", "z"},
-                {"0", "9"}
+            {"a", "z"},
+            {"0", "9"}
         });
 
         testBTree(expected, btree, strQueries);

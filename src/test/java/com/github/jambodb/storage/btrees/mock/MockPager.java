@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MockPager<K, V> implements Pager<BTreePage<K, V>> {
-
     private final Map<Integer, MockBTreePage<K, V>> map;
     private final int maxDegree;
     private int root;

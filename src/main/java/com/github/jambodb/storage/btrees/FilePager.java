@@ -4,12 +4,10 @@ import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.blocks.FileBlockStorage;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
 
-public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
+public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     private static final int BLOCK_SIZE = 8 * 1024;
     private static final int MAX_CACHE = 10;
 

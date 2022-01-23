@@ -1,17 +1,13 @@
 package com.github.jambodb.storage.btrees.mock;
 
 import com.github.jambodb.storage.btrees.Serializer;
-
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class MockObjectSerializer implements Serializer<MockObject> {
     private static final String sep = "<>";
 
     @Override
-    public MockObject read(ByteBuffer buffer) {
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
+    public MockObject parse(byte[] bytes) {
         String string = new String(bytes, StandardCharsets.UTF_8);
         String[] parts = string.split(sep);
         if (parts.length == 3) {
@@ -25,12 +21,12 @@ public class MockObjectSerializer implements Serializer<MockObject> {
     }
 
     @Override
-    public void write(MockObject value, ByteBuffer buffer) {
+    public byte[] serialize(MockObject value) {
         if (value != null) {
             String string = String.format("%s%s%d%s%d",
                 value.getStringValue(), sep, value.isBoolValue() ? 1 : 0, sep, value.getIntValue());
-            byte[] bytes = StandardCharsets.UTF_8.encode(string).array();
-            buffer.put(bytes);
+            return StandardCharsets.UTF_8.encode(string).array();
         }
+        return null;
     }
 }

@@ -2,7 +2,7 @@ package com.github.jambodb.storage.btrees;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
 import java.io.IOException;
-import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -19,7 +19,12 @@ public class FilePagerHeader {
     }
 
     public static FilePagerHeader read(BlockStorage blockStorage) throws IOException {
-        return SerializerUtils.read(blockStorage, 0, FilePagerHeader.class);
+        ByteBuffer buffer = ByteBuffer.allocate(blockStorage.blockSize());
+        blockStorage.read(0, buffer);
+        int root = buffer.getInt();
+        int maxDegree = buffer.getInt();
+        int lastPage = buffer.getInt();
+        return new FilePagerHeader(root, maxDegree, lastPage);
     }
 
     public int root() {
@@ -66,7 +71,12 @@ public class FilePagerHeader {
     }
 
     public void write(BlockStorage blockStorage) throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(blockStorage.blockSize());
+        buffer.putInt(root);
+        buffer.putInt(maxDegree);
+        buffer.putInt(lastPage);
+        buffer.flip();
         blockStorage.createBlock();
-        SerializerUtils.write(blockStorage, 0, this);
+        blockStorage.write(0, buffer);
     }
 }
