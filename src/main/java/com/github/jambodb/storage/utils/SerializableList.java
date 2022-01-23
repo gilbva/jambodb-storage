@@ -50,6 +50,14 @@ public class SerializableList<T> implements Iterable<T> {
         return list != null ? list.size() : 0;
     }
 
+    public void resize(int size) {
+        if (list != null) {
+            while (size < list.size()) {
+                list.remove(list.size() - 1);
+            }
+        }
+    }
+
     @Override
     public Iterator<T> iterator() {
         if (list == null) {

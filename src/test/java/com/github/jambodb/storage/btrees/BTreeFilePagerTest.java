@@ -23,7 +23,7 @@ public class BTreeFilePagerTest extends BTreeTestBase {
     @Test
     public void testBTreeFile() throws IOException {
         var expected = new TreeMap<String, String>();
-        var path = Files.createTempDirectory("btree-test.data");
+        var path = Files.createTempFile("btree-test", ".data");
         var pager = new FilePager<>(4, path, STRING_SERIALIZER, STRING_SERIALIZER);
         BTree<String, String> btree = new BTree<>(pager);
         pager.fsync();

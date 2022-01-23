@@ -30,7 +30,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         Arrays.fill(children, -1);
         size = 0;
         dirty = true;
-        deleted = true;
+        deleted = false;
     }
 
     public static <K, V> FileBTreePage<K, V> read(int id, BlockStorage blockStorage,
@@ -98,6 +98,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             for (int i = size; i <= maxDegree; i++) {
                 children[i + 1] = -1;
             }
+            keys.resize(size);
+            values.resize(size);
         }
     }
 

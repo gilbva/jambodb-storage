@@ -15,12 +15,14 @@ public class BTreeTestBase {
         for (var entry : tree.entrySet()) {
             bTree.put(entry.getKey(), entry.getValue());
             Assertions.assertNotNull(entry.getKey());
-            Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
+            V value = bTree.get(entry.getKey());
+            Assertions.assertEquals(entry.getValue(), value);
         }
         pager.fsync();
 
         for (var entry : tree.entrySet()) {
-            Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
+            V value = bTree.get(entry.getKey());
+            Assertions.assertEquals(entry.getValue(), value);
         }
 
         for (var key : tree.keySet()) {
@@ -35,7 +37,8 @@ public class BTreeTestBase {
 
         for (var entry : tree.entrySet()) {
             bTree.put(entry.getKey(), entry.getValue());
-            Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
+            V value = bTree.get(entry.getKey());
+            Assertions.assertEquals(entry.getValue(), value);
         }
         pager.fsync();
 

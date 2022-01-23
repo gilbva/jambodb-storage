@@ -3,6 +3,7 @@ package com.github.jambodb.storage.btrees;
 import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.blocks.FileBlockStorage;
 import java.io.IOException;
+import java.nio.BufferUnderflowException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -67,7 +68,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
                 FileBTreePage<K, V> page = FileBTreePage.read(id, blockStorage, keySerializer, valueSerializer);
                 map.put(id, page);
                 addCache(id);
-            }
+            } catch (BufferUnderflowException ignored) {}
         }
         return map.get(id);
     }

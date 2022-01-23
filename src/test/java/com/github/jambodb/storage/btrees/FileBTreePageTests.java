@@ -12,6 +12,7 @@ import com.github.jambodb.storage.btrees.mock.StringSerializer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class FileBTreePageTests {
     private static final int BLOCK_SIZE = 8 * 1024;
@@ -36,7 +37,7 @@ public class FileBTreePageTests {
             = new FileBTreePage<>(0, true, 2, stringSerializer, mockSerializer);
         btree.key(0, mockObject.getStringValue());
         btree.value(0, mockObject);
-        Path path = Files.createTempFile("jambodb.btree", "-test");
+        Path path = Files.createTempFile("jambodb.btree", ".test");
         Files.deleteIfExists(path);
         try (BlockStorage blockStorage = FileBlockStorage.writeable(BLOCK_SIZE, path)) {
             btree.fsync(blockStorage);
@@ -45,6 +46,7 @@ public class FileBTreePageTests {
         try (BlockStorage blockStorage = FileBlockStorage.readable(path)) {
             FileBTreePage<String, MockObject> readBtree
                 = FileBTreePage.read(0, blockStorage, stringSerializer, mockSerializer);
+            assertNotNull(readBtree);
             assertEquals(mockObject.getStringValue(), readBtree.key(0).trim());
             assertEquals(mockObject, readBtree.value(0));
         }

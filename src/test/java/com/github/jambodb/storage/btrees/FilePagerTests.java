@@ -25,7 +25,7 @@ public class FilePagerTests {
 
     @Test
     public void testFsync() throws IOException {
-        Path path = Files.createTempFile("jambodb.btree-pager", "-test");
+        Path path = Files.createTempFile("jambodb.btree-pager", ".test");
         FilePager<String, MockObject> pager
             = new FilePager<>(2, path, stringSerializer, mockSerializer);
         int totalPages = 10;
