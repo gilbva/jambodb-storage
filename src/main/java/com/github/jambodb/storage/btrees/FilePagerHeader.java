@@ -66,7 +66,7 @@ public class FilePagerHeader {
 
     public void removeDeletedPage(int id) {
         if (deletedPages().contains(id)) {
-            deletedPages.remove(id);
+            deletedPages.remove((Integer) id);
         }
     }
 
@@ -86,7 +86,6 @@ public class FilePagerHeader {
             buffer.putInt(deletedId);
         }
         buffer.flip();
-        blockStorage.createBlock();
         blockStorage.write(0, buffer);
     }
 }

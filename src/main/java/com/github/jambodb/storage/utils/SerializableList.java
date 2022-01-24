@@ -27,14 +27,12 @@ public class SerializableList<T> implements Iterable<T> {
         return null;
     }
 
-    public void put(int index, T key) {
-        if (list == null) {
-            list = new LinkedList<>();
+    public boolean put(int index, T key) {
+        if (list != null && index < list.size()) {
+            list.set(index, key);
+            return true;
         }
-        while (index > list.size()) {
-            list.add(null);
-        }
-        list.add(index, key);
+        return false;
     }
 
     public void add(byte[] bytes) {
@@ -51,10 +49,14 @@ public class SerializableList<T> implements Iterable<T> {
     }
 
     public void resize(int size) {
-        if (list != null) {
-            while (size < list.size()) {
-                list.remove(list.size() - 1);
-            }
+        if (list == null) {
+            list = new LinkedList<>();
+        }
+        while (size > list.size()) {
+            list.add(null);
+        }
+        while (size < list.size()) {
+            list.remove(list.size() - 1);
         }
     }
 

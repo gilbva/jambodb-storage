@@ -1,11 +1,10 @@
 package com.github.jambodb.storage.btrees;
 
-import org.junit.jupiter.api.Assertions;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.junit.jupiter.api.Assertions;
 
 public class BTreeTestBase {
     public static final Logger LOG = Logger.getLogger(BTreeTestBase.class.getName());

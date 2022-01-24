@@ -27,6 +27,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
         cachePages = new LinkedList<>();
+        create(true);
     }
 
     public FilePager(Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
@@ -68,7 +69,8 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
                 FileBTreePage<K, V> page = FileBTreePage.read(id, blockStorage, keySerializer, valueSerializer);
                 map.put(id, page);
                 addCache(id);
-            } catch (BufferUnderflowException ignored) {}
+            } catch (BufferUnderflowException ignored) {
+            }
         }
         return map.get(id);
     }
@@ -99,15 +101,17 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     @Override
     public void remove(int id) throws IOException {
-        map.remove(id);
-        cachePages.remove(id);
-        header.addDeletedPage(id);
-        FileBTreePage<K, V> page = page(id);
-        if (page != null) {
-            page.deleted(true);
-        }
-        if (header.lastPage() - id == 1) {
-            header.incLastPage(-1);
+        if (id >= 0 && id < header.lastPage()) {
+            map.remove(id);
+            cachePages.remove(id);
+            header.addDeletedPage(id);
+            FileBTreePage<K, V> page = page(id);
+            if (page != null) {
+                page.deleted(true);
+            }
+            if (header.lastPage() - id == 1) {
+                header.incLastPage(-1);
+            }
         }
     }
 
@@ -115,6 +119,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     public void fsync() throws IOException {
         Files.deleteIfExists(path);
         try (BlockStorage blockStorage = FileBlockStorage.writeable(BLOCK_SIZE, path)) {
+            blockStorage.blockCount(lastPage() + 1);
             header.write(blockStorage);
             writePages(blockStorage);
             clearCache();
@@ -122,7 +127,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     }
 
     private void clearCache() {
-        map.clear();
+        map.keySet().removeIf(key -> key != header.root());
         cachePages.clear();
     }
 

@@ -1,14 +1,13 @@
 package com.github.jambodb.storage.btrees;
 
+import com.github.jambodb.storage.btrees.mock.MockObject;
+import com.github.jambodb.storage.btrees.mock.MockObjectSerializer;
+import com.github.jambodb.storage.btrees.mock.StringSerializer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-
-import com.github.jambodb.storage.btrees.mock.MockObject;
-import com.github.jambodb.storage.btrees.mock.MockObjectSerializer;
-import com.github.jambodb.storage.btrees.mock.StringSerializer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -29,9 +28,10 @@ public class FilePagerTests {
         FilePager<String, MockObject> pager
             = new FilePager<>(2, path, stringSerializer, mockSerializer);
         int totalPages = 10;
-        for (int i = 0; i < totalPages; i++) {
+        for (int i = 1; i < totalPages; i++) {
             MockObject mockObject = createMockObject(i);
             FileBTreePage<String, MockObject> page = pager.create(i % 2 != 0);
+            page.size(1);
             page.key(0, mockObject.getStringValue());
             page.value(0, mockObject);
         }
@@ -43,7 +43,7 @@ public class FilePagerTests {
 
         FilePager<String, MockObject> readPager = new FilePager<>(path, stringSerializer, mockSerializer);
         assertEquals(pager.lastPage(), readPager.lastPage());
-        for (int i = 0; i < totalPages; i++) {
+        for (int i = 1; i < totalPages; i++) {
             FileBTreePage<String, MockObject> page = readPager.page(i);
             if (deleted.contains(i)) {
                 assertNull(page);

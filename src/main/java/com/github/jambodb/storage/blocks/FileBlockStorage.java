@@ -54,6 +54,12 @@ public class FileBlockStorage implements BlockStorage {
     }
 
     @Override
+    public void blockCount(int count) throws IOException {
+        blockCount = count;
+        writeHeader();
+    }
+
+    @Override
     public synchronized int createBlock() throws IOException {
         blockCount++;
         writeHeader();

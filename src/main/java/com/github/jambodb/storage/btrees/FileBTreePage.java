@@ -56,17 +56,25 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         int keysSize = buffer.getInt();
         for (int i = 0; i < keysSize; i++) {
             int nextKeySize = buffer.getInt();
-            byte[] keysBytes = new byte[nextKeySize];
-            buffer.get(keysBytes);
-            page.keys.add(keysBytes);
+            if (nextKeySize > 0) {
+                byte[] keysBytes = new byte[nextKeySize];
+                buffer.get(keysBytes);
+                page.keys.add(keysBytes);
+            } else {
+                page.keys.add(null);
+            }
         }
         // values
         int valuesSize = buffer.getInt();
         for (int i = 0; i < valuesSize; i++) {
             int nextValueSize = buffer.getInt();
-            byte[] valuesBytes = new byte[nextValueSize];
-            buffer.get(valuesBytes);
-            page.values.add(valuesBytes);
+            if (nextValueSize > 0) {
+                byte[] valuesBytes = new byte[nextValueSize];
+                buffer.get(valuesBytes);
+                page.values.add(valuesBytes);
+            } else {
+                page.values.add(null);
+            }
         }
         return page;
     }
@@ -86,17 +94,19 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     public void deleted(boolean deleted) {
-        dirty = this.deleted != deleted;
+        if (this.deleted != deleted) {
+            dirty = true;
+        }
         this.deleted = deleted;
     }
 
     @Override
     public void size(int size) {
-        dirty = this.size != size;
-        if (dirty) {
+        if (this.size != size) {
+            dirty = true;
             this.size = size;
-            for (int i = size; i <= maxDegree; i++) {
-                children[i + 1] = -1;
+            for (int i = size + 1; i < children.length; i++) {
+                children[i] = -1;
             }
             keys.resize(size);
             values.resize(size);
@@ -130,9 +140,10 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void key(int index, K key) {
-        keys.put(index, key);
-        expandSize(index);
-        dirty = true;
+        if (index < keys.size()) {
+            keys.put(index, key);
+            dirty = true;
+        }
     }
 
     @Override
@@ -142,9 +153,9 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void value(int index, V value) {
-        values.put(index, value);
-        expandSize(index);
-        dirty = true;
+        if (values.put(index, value)) {
+            dirty = true;
+        }
     }
 
     @Override
@@ -157,16 +168,9 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void child(int index, int child) {
-        expandSize(index);
         if (index < children.length) {
             children[index] = child;
             dirty = true;
-        }
-    }
-
-    private void expandSize(int index) {
-        if (index >= size) {
-            size = index + 1;
         }
     }
 
@@ -186,23 +190,27 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         Iterator<byte[]> keysBytesIterator = keys.bytesIterator();
         while (keysBytesIterator.hasNext()) {
             byte[] bytes = keysBytesIterator.next();
-            buffer.putInt(bytes.length);
-            buffer.put(bytes);
+            if (bytes != null) {
+                buffer.putInt(bytes.length);
+                buffer.put(bytes);
+            } else {
+                buffer.putInt(0);
+            }
         }
         // values
         buffer.putInt(values.size());
         Iterator<byte[]> valuesBytesIterator = values.bytesIterator();
         while (valuesBytesIterator.hasNext()) {
             byte[] bytes = valuesBytesIterator.next();
-            buffer.putInt(bytes.length);
-            buffer.put(bytes);
+            if (bytes != null) {
+                buffer.putInt(bytes.length);
+                buffer.put(bytes);
+            } else {
+                buffer.putInt(0);
+            }
         }
-        int index;
-        do {
-            index = blockStorage.createBlock() - 1;
-        } while (index < storageId(id));
         buffer.flip();
-        blockStorage.write(index, buffer);
+        blockStorage.write(storageId(id), buffer);
     }
 
     private static int storageId(int id) {
