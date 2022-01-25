@@ -117,7 +117,6 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     @Override
     public void fsync() throws IOException {
-        Files.deleteIfExists(path);
         try (BlockStorage blockStorage = FileBlockStorage.writeable(BLOCK_SIZE, path)) {
             blockStorage.blockCount(lastPage() + 1);
             header.write(blockStorage);

@@ -26,7 +26,12 @@ public class FileBlockStorage implements BlockStorage {
     }
 
     public static BlockStorage writeable(int blockSize, Path path) throws IOException {
-        OpenOption[] options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE};
+        OpenOption[] options;
+        if (Files.exists(path)) {
+            options = new OpenOption[]{StandardOpenOption.WRITE};
+        } else {
+            options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE};
+        }
         SeekableByteChannel channel = Files.newByteChannel(path, options);
         return new FileBlockStorage(blockSize, channel);
     }
@@ -38,7 +43,12 @@ public class FileBlockStorage implements BlockStorage {
     }
 
     public static BlockStorage readWrite(int blockSize, Path path) throws IOException {
-        OpenOption[] options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
+        OpenOption[] options;
+        if (Files.exists(path)) {
+            options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
+        } else {
+            options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE};
+        }
         SeekableByteChannel channel = Files.newByteChannel(path, options);
         return new FileBlockStorage(blockSize, channel);
     }
