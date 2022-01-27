@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Random;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -15,7 +14,7 @@ public class FileBlockStorageTest {
     @Test
     public void testFileBlockStorage() throws IOException {
         var raf = createFile();
-        var storage = new FileBlockStorage(4 * 4096, raf, StandardOpenOption.READ, StandardOpenOption.WRITE);
+        var storage = FileBlockStorage.readWrite(4 * 4096, raf);
 
         Assertions.assertThrows(Exception.class, () -> storage.read(0, ByteBuffer.allocate(storage.blockSize())));
         Assertions.assertThrows(Exception.class, () -> storage.write(0, ByteBuffer.allocate(storage.blockSize())));
@@ -28,7 +27,7 @@ public class FileBlockStorageTest {
             Assertions.assertEquals(toWrite, toRead);
         }
 
-        var readStorage = new FileBlockStorage(raf, StandardOpenOption.READ);
+        var readStorage = FileBlockStorage.readable(raf);
         Assertions.assertEquals(storage.blockCount(), readStorage.blockCount());
         Assertions.assertEquals(storage.blockSize(), readStorage.blockSize());
         for (int i = 0; i < 1000; i++) {
@@ -41,7 +40,7 @@ public class FileBlockStorageTest {
     @Test
     public void testFileBlockStorageWithIntValues() throws IOException {
         var raf = createFile();
-        var storage = new FileBlockStorage(4, raf, StandardOpenOption.READ, StandardOpenOption.WRITE);
+        var storage = FileBlockStorage.readWrite(4, raf);
 
         for (int i = 0; i < 10; i++) {
             storage.createBlock();
@@ -53,7 +52,7 @@ public class FileBlockStorageTest {
             Assertions.assertEquals(i, buffer.getInt());
         }
 
-        var readStorage = new FileBlockStorage(raf, StandardOpenOption.READ);
+        var readStorage = FileBlockStorage.readable(raf);
         Assertions.assertEquals(storage.blockCount(), readStorage.blockCount());
         Assertions.assertEquals(storage.blockSize(), readStorage.blockSize());
         for (int i = 0; i < 10; i++) {

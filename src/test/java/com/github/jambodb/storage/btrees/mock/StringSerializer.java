@@ -1,23 +1,22 @@
 package com.github.jambodb.storage.btrees.mock;
 
 import com.github.jambodb.storage.btrees.Serializer;
-
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class StringSerializer implements Serializer<String> {
     @Override
-    public String read(ByteBuffer buffer) {
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
-        return new String(bytes, StandardCharsets.UTF_8);
+    public String parse(byte[] bytes) {
+        if (bytes != null) {
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
+        return null;
     }
 
     @Override
-    public void write(String value, ByteBuffer buffer) {
-        if (value != null) {
-            byte[] bytes = StandardCharsets.UTF_8.encode(value).array();
-            buffer.put(bytes);
+    public byte[] serialize(String string) {
+        if (string != null) {
+            return StandardCharsets.UTF_8.encode(string).array();
         }
+        return null;
     }
 }
