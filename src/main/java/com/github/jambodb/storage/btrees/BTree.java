@@ -134,7 +134,7 @@ public final class BTree<K extends Comparable<K>, V> {
     public BTree(Pager<BTreePage<K, V>> pager) throws IOException {
         this.pager = pager;
         this.root = pager.page(pager.root());
-        if(this.root == null) {
+        if (this.root == null) {
             this.root = pager.create(true);
             pager.root(this.root.id());
         }
