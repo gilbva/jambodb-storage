@@ -351,19 +351,17 @@ public final class BTree<K extends Comparable<K>, V> {
      */
     Node<K, V> prev(Node<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         if (current.page.isLeaf()) {
-            if (current.index - 1 >= 0) {
+            if (current.index > 0) {
                 return new Node<>(current.page, current.index - 1);
             }
         } else {
-            if (current.index >= 0) {
-                ancestors.addFirst(current);
-                return last(getChildPage(current.page, current.index), ancestors);
-            }
+            ancestors.addFirst(current);
+            return last(getChildPage(current.page, current.index), ancestors);
         }
 
         while (!ancestors.isEmpty()) {
             var node = ancestors.removeFirst();
-            if (node.index - 1 >= 0) {
+            if (node.index > 0) {
                 return new Node<>(node.page, node.index - 1);
             }
         }
