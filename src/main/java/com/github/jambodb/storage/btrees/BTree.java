@@ -326,8 +326,10 @@ public final class BTree<K extends Comparable<K>, V> {
             }
         } else {
             if (current.index < current.page.size()) {
-                ancestors.addFirst(new Node<>(current.page, current.index + 1));
-                return first(getChildPage(current.page, current.index + 1), ancestors);
+                var parent = new Node<>(current.page, current.index + 1);
+                ancestors.addFirst(parent);
+                var child = getChildPage(parent.page, parent.index);
+                return first(child, ancestors);
             }
         }
 
@@ -356,7 +358,8 @@ public final class BTree<K extends Comparable<K>, V> {
             }
         } else {
             ancestors.addFirst(current);
-            return last(getChildPage(current.page, current.index), ancestors);
+            var child = getChildPage(current.page, current.index);
+            return last(child, ancestors);
         }
 
         while (!ancestors.isEmpty()) {
