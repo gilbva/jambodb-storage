@@ -300,12 +300,12 @@ public final class BTree<K extends Comparable<K>, V> {
     Node<K, V> last(BTreePage<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         while (!current.isLeaf()) {
             if (ancestors != null) {
-                ancestors.addFirst(new Node<>(current, 0));
+                ancestors.addFirst(new Node<>(current, current.size()));
             }
             current = getChildPage(current, current.size());
         }
         if (current.size() > 0) {
-            return new Node<>(current, current.size());
+            return new Node<>(current, current.size()-1);
         }
         return null;
     }
