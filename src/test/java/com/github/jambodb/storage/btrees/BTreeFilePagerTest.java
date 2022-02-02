@@ -1,5 +1,6 @@
 package com.github.jambodb.storage.btrees;
 
+import com.github.jambodb.storage.btrees.files.FilePager;
 import com.github.jambodb.storage.btrees.mock.StringSerializer;
 import java.io.IOException;
 import java.nio.file.Files;
