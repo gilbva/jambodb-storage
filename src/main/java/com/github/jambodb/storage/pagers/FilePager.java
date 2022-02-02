@@ -1,4 +1,4 @@
-package com.github.jambodb.storage.btrees.files;
+package com.github.jambodb.storage.pagers;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.blocks.FileBlockStorage;
