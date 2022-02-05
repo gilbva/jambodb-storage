@@ -1,4 +1,4 @@
-package com.github.jambodb.storage.btrees;
+package com.github.jambodb.storage.pagers;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
 import java.io.IOException;
@@ -8,8 +8,11 @@ import java.util.List;
 
 public class FilePagerHeader {
     private int root;
+
     private final int maxDegree;
+
     private int lastPage;
+
     private List<Integer> deletedPages;
 
     public FilePagerHeader(int root, int maxDegree, int lastPage) {

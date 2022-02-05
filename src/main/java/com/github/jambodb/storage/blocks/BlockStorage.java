@@ -37,22 +37,29 @@ public interface BlockStorage extends Closeable {
     void blockCount(int count) throws IOException;
 
     /**
-     * @return
-     * @throws IOException
+     * This method creates a new block by expanding the count of blocks
+     * currently manage by this object.
+     *
+     * @return The index of the new block created.
+     * @throws IOException if any I/O exceptions occur writing to the underlying storage.
      */
     int createBlock() throws IOException;
 
     /**
-     * @param index
-     * @param data
-     * @throws IOException
+     * This method reads the block at the given index, into the provided data buffer.
+     *
+     * @param index The index of the block to read from.
+     * @param data The buffer to place the data.
+     * @throws IOException if any I/O exceptions occur reading to the underlying storage.
      */
     void read(int index, ByteBuffer data) throws IOException;
 
     /**
-     * @param index
-     * @param data
-     * @throws IOException
+     * This method reads the block at the given index, into the provided data buffer.
+     *
+     * @param index The index of the block to write to.
+     * @param data The buffer with the data to be written to the block.
+     * @throws IOException if any I/O exceptions occur writing to the underlying storage.
      */
     void write(int index, ByteBuffer data) throws IOException;
 }

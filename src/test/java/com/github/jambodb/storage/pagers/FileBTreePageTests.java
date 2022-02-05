@@ -1,7 +1,9 @@
-package com.github.jambodb.storage.btrees;
+package com.github.jambodb.storage.pagers;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.blocks.FileBlockStorage;
+import com.github.jambodb.storage.btrees.Serializer;
+import com.github.jambodb.storage.pagers.FileBTreePage;
 import com.github.jambodb.storage.btrees.mock.MockObject;
 import com.github.jambodb.storage.btrees.mock.MockObjectSerializer;
 import com.github.jambodb.storage.btrees.mock.StringSerializer;

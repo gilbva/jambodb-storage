@@ -19,6 +19,12 @@ public final class BTree<K extends Comparable<K>, V> {
     /**
      * This class holds a reference to a particular point in the tree,
      * a node (or cell) is located by its page and its index within that page.
+     * While the class is mainly for internal use only, it implements the
+     * BTreeEntry interface which is the interface used to gain access to a
+     * particular element in the tree from the outside. Along with the convenient access
+     * to the key and value of the node, the class offer also some utility
+     * methods to test if the node is off-page, to provide access to the child of the
+     * node, and to test if a particular key is less or greater than the key of this node.
      *
      * @param <K> The type for the key.
      * @param <V> The type for the value.
@@ -42,6 +48,11 @@ public final class BTree<K extends Comparable<K>, V> {
             return page.value(index);
         }
 
+        /**
+         * Gets the id of the child for this element.
+         *
+         * @return the id of the child stored in the element pointed by this node.
+         */
         public int child() {
             return page.child(index);
         }
@@ -51,15 +62,38 @@ public final class BTree<K extends Comparable<K>, V> {
             return String.format("%s=%s", key(), value());
         }
 
+        /**
+         * Determines if this node is off-page, meaning that
+         * his index is equal or greater than the size of the page.
+         *
+         * @return true if the node is outside the page, false if
+         * the node points to an element inside the page bounds.
+         */
         public boolean isOffPage() {
             return index >= page.size();
         }
 
-        private boolean lesserThan(K key) {
+        /**
+         * Determines if the key of this node is less than
+         * the given key.
+         *
+         * @param key The key to compare with.
+         * @return true if this node's key is less than the one given.
+         * false otherwise.
+         */
+        public boolean lesserThan(K key) {
             return key().compareTo(key) < 0;
         }
 
-        private boolean greaterThan(K key) {
+        /**
+         * Determines if the key of this node is greater than
+         * the given key.
+         *
+         * @param key The key to compare with.
+         * @return true if this node's key is greater than the one given.
+         * false otherwise.
+         */
+        public boolean greaterThan(K key) {
             return key().compareTo(key) > 0;
         }
     }
@@ -201,11 +235,7 @@ public final class BTree<K extends Comparable<K>, V> {
         }
 
         final Deque<Node<K, V>> ancestors = new LinkedList<>();
-        Node<K, V> first = from == null ? first(root, ancestors) : lookupFirst(from, ancestors);
-        if (to != null && first != null && first.greaterThan(to)) {
-            first = null;
-        }
-        final Node<K, V> fromNode = first;
+        final Node<K, V> fromNode = startingNode(from, to, ancestors);
 
         return new Iterator<>() {
             Node<K, V> current = fromNode;
@@ -227,11 +257,78 @@ public final class BTree<K extends Comparable<K>, V> {
                         }
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    throw new IllegalStateException(e.getMessage(), e);
                 }
                 return entry;
             }
         };
+    }
+
+    /**
+     * This method localizes the starting node for the given query range, which is the node with
+     * the lowest key that is equal or greater than the from key and lesser than the to key.
+     *
+     * @param from The lower bound for the query, the resulting node will be equal or greater than this key.
+     * @param to The upper bound for the query, the resulting node will be equal or lesser than this key.
+     * @param ancestors The queue to track the ancestors of the resulting node.
+     * @return The starting node of the given range
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
+     */
+    private Node<K, V> startingNode(K from, K to, Deque<Node<K, V>> ancestors) throws IOException {
+        if(from == null) {
+            return first(root, ancestors);
+        }
+
+        if(to != null && from.compareTo(to) > 0) {
+            return null;
+        }
+
+        Node<K, V> first = lookupFirst(from, ancestors);
+        if (to != null && first != null && first.greaterThan(to)) {
+            first = null;
+        }
+        return first;
+    }
+
+    /**
+     * Looks up the node for the smallest key that is greater than the given key.
+     * this method returns the first node of the entire tree.
+     *
+     * @param from      the lower bound key to look for in the tree.
+     * @param ancestors the list of ancestors that will be populated as the structure is searched from top to bottom.
+     * @return a result node referencing the given key if found, or the node referencing the next key from the given key.
+     * @throws IOException thrown by the Pager interface if any I/O errors occur.
+     */
+    Node<K, V> lookupFirst(K from, Deque<Node<K, V>> ancestors) throws IOException {
+        var result = lookup(from, ancestors);
+        if (result.found) {
+            return result;
+        }
+
+        Node<K, V> current = result;
+        if (current.isOffPage()) {
+            current = prev(current, ancestors);
+        }
+
+        var prevAncestors = new LinkedList<>(ancestors);
+        Node<K, V> prev = current;
+        while (current != null && current.greaterThan(from)) {
+            prevAncestors = new LinkedList<>(ancestors);
+            prev = current;
+            current = prev(current, ancestors);
+        }
+
+        ancestors.clear();
+        ancestors.addAll(prevAncestors);
+        current = prev;
+        while (current != null) {
+            if (current.greaterThan(from)) {
+                return current;
+            }
+            current = next(current, ancestors);
+        }
+
+        return null;
     }
 
     /**
@@ -266,12 +363,12 @@ public final class BTree<K extends Comparable<K>, V> {
     Node<K, V> last(BTreePage<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         while (!current.isLeaf()) {
             if (ancestors != null) {
-                ancestors.addFirst(new Node<>(current, 0));
+                ancestors.addFirst(new Node<>(current, current.size()));
             }
             current = getChildPage(current, current.size());
         }
         if (current.size() > 0) {
-            return new Node<>(current, current.size());
+            return new Node<>(current, current.size()-1);
         }
         return null;
     }
@@ -292,8 +389,10 @@ public final class BTree<K extends Comparable<K>, V> {
             }
         } else {
             if (current.index < current.page.size()) {
-                ancestors.addFirst(new Node<>(current.page, current.index + 1));
-                return first(getChildPage(current.page, current.index + 1), ancestors);
+                var parent = new Node<>(current.page, current.index + 1);
+                ancestors.addFirst(parent);
+                var child = getChildPage(parent.page, parent.index);
+                return first(child, ancestors);
             }
         }
 
@@ -317,63 +416,21 @@ public final class BTree<K extends Comparable<K>, V> {
      */
     Node<K, V> prev(Node<K, V> current, Deque<Node<K, V>> ancestors) throws IOException {
         if (current.page.isLeaf()) {
-            if (current.index - 1 >= 0) {
+            if (current.index > 0) {
                 return new Node<>(current.page, current.index - 1);
             }
         } else {
-            if (current.index >= 0) {
-                ancestors.addFirst(current);
-                return last(getChildPage(current.page, current.index), ancestors);
-            }
+            ancestors.addFirst(current);
+            var child = getChildPage(current.page, current.index);
+            return last(child, ancestors);
         }
 
         while (!ancestors.isEmpty()) {
             var node = ancestors.removeFirst();
-            if (node.index - 1 >= 0) {
+            if (node.index > 0) {
                 return new Node<>(node.page, node.index - 1);
             }
         }
-        return null;
-    }
-
-    /**
-     * Looks up the node for the smallest key that is greater than the given key.
-     *
-     * @param from      the lower bound key to look for in the tree.
-     * @param ancestors the list of ancestors that will be populated as the structure is searched from top to bottom.
-     * @return a result node referencing the given key if found, or the node referencing the next key from the given key.
-     * @throws IOException thrown by the Pager interface if any I/O errors occur.
-     */
-    Node<K, V> lookupFirst(K from, Deque<Node<K, V>> ancestors) throws IOException {
-        var result = lookup(from, ancestors);
-
-        if (result.found) {
-            return result;
-        }
-
-        Node<K, V> current = result;
-        if (current.isOffPage()) {
-            current = prev(current, ancestors);
-        }
-
-        var prevAncestors = new LinkedList<>(ancestors);
-        Node<K, V> prev = current;
-        while (current != null && current.greaterThan(from)) {
-            prevAncestors = new LinkedList<>(ancestors);
-            prev = current;
-            current = prev(current, ancestors);
-        }
-
-        ancestors.clear();
-        ancestors.addAll(prevAncestors);
-        current = prev;
-        while (current != null) {
-            if (current.greaterThan(from)) {
-                return current;
-            }
-            current = next(current, ancestors);
-        }
-
         return null;
     }
 

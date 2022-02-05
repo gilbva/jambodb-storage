@@ -1,5 +1,9 @@
-package com.github.jambodb.storage.btrees;
+package com.github.jambodb.storage.pagers;
 
+import com.github.jambodb.storage.btrees.BTree;
+import com.github.jambodb.storage.btrees.BTreePage;
+import com.github.jambodb.storage.btrees.BTreeTestBase;
+import com.github.jambodb.storage.btrees.Serializer;
 import com.github.jambodb.storage.btrees.mock.StringSerializer;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,7 +34,7 @@ public class BTreeFilePagerTest extends BTreeTestBase {
         btree.put("a", "A");
         btree.put("b", "B");
         btree.put("c", "C");
-        BTreePage<String, String> page = btree.pager.page(1);
+        BTreePage<String, String> page = pager.page(1);
         assertNotNull(page);
         assertEquals(0, page.child(0));
         assertEquals(2, page.child(1));
