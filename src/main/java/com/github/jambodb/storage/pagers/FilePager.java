@@ -1,7 +1,7 @@
 package com.github.jambodb.storage.pagers;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
-import com.github.jambodb.storage.blocks.FileBlockStorage;
+import com.github.jambodb.storage.blocks.JamboBlksV1;
 import com.github.jambodb.storage.btrees.BTreePage;
 import com.github.jambodb.storage.btrees.Pager;
 import com.github.jambodb.storage.btrees.Serializer;
@@ -37,7 +37,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     public FilePager(Path path, Serializer<K> keySerializer, Serializer<V> valueSerializer) throws IOException {
         this.path = path;
         checkPath();
-        try (BlockStorage blockStorage = FileBlockStorage.readable(path)) {
+        try (BlockStorage blockStorage = JamboBlksV1.readable(path)) {
             header = FilePagerHeader.read(blockStorage);
             cachePages = new LinkedList<>();
             this.map = new HashMap<>();
@@ -69,7 +69,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     @Override
     public FileBTreePage<K, V> page(int id) throws IOException {
         if (map.get(id) == null && !header.deletedPages().contains(id)) {
-            try (BlockStorage blockStorage = FileBlockStorage.readable(path)) {
+            try (BlockStorage blockStorage = JamboBlksV1.readable(path)) {
                 FileBTreePage<K, V> page = FileBTreePage.read(id, blockStorage, keySerializer, valueSerializer);
                 map.put(id, page);
                 addCache(id);
@@ -121,7 +121,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     @Override
     public void fsync() throws IOException {
-        try (BlockStorage blockStorage = FileBlockStorage.writeable(BLOCK_SIZE, path)) {
+        try (BlockStorage blockStorage = JamboBlksV1.writeable(BLOCK_SIZE, path)) {
             blockStorage.blockCount(lastPage() + 1);
             header.write(blockStorage);
             writePages(blockStorage);

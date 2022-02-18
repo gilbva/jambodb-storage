@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
-public class FileBlockStorage implements BlockStorage {
+public class JamboBlksV1 implements BlockStorage {
     private static final byte[] SIGN = "JamboBlks".getBytes(StandardCharsets.UTF_8);
     private static final byte[] VERSION = "v1".getBytes(StandardCharsets.UTF_8);
     private static final int HEADER_SIZE = SIGN.length + VERSION.length + 8;
@@ -27,13 +27,13 @@ public class FileBlockStorage implements BlockStorage {
             options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE};
         }
         SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new FileBlockStorage(blockSize, channel);
+        return new JamboBlksV1(blockSize, channel);
     }
 
     public static BlockStorage readable(Path path) throws IOException {
         OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
         SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new FileBlockStorage(channel);
+        return new JamboBlksV1(channel);
     }
 
     public static BlockStorage readWrite(int blockSize, Path path) throws IOException {
@@ -44,16 +44,16 @@ public class FileBlockStorage implements BlockStorage {
             options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE};
         }
         SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new FileBlockStorage(blockSize, channel);
+        return new JamboBlksV1(blockSize, channel);
     }
 
-    public FileBlockStorage(int blockSize, SeekableByteChannel channel) {
+    public JamboBlksV1(int blockSize, SeekableByteChannel channel) {
         this.blockSize = blockSize;
         this.blockCount = 0;
         this.channel = channel;
     }
 
-    public FileBlockStorage(SeekableByteChannel channel) throws IOException {
+    public JamboBlksV1(SeekableByteChannel channel) throws IOException {
         this.channel = channel;
         readHeader();
     }
