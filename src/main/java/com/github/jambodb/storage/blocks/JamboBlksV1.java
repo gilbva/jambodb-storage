@@ -3,19 +3,14 @@ package com.github.jambodb.storage.blocks;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
 
 public class JamboBlksV1 implements BlockStorage {
-    private static final byte[] SIGN = "JamboBlks".getBytes(StandardCharsets.UTF_8);
-    private static final byte[] VERSION = "v1".getBytes(StandardCharsets.UTF_8);
-    private static final int HEADER_SIZE = SIGN.length + VERSION.length + 8;
-
     private final SeekableByteChannel channel;
+    private JamboBlksV1Header header;
     private int blockSize;
     private int blockCount;
 
@@ -47,15 +42,24 @@ public class JamboBlksV1 implements BlockStorage {
         return new JamboBlksV1(blockSize, channel);
     }
 
-    public JamboBlksV1(int blockSize, SeekableByteChannel channel) {
-        this.blockSize = blockSize;
-        this.blockCount = 0;
-        this.channel = channel;
+    private JamboBlksV1(int size, SeekableByteChannel fileChannel) throws IOException {
+        channel = fileChannel;
+        blockSize = size;
+
+        header = new JamboBlksV1Header();
+        header.init();
+        header.blockSize(blockSize);
+        header.blockCount(0);
+        header.write(channel);
     }
 
-    public JamboBlksV1(SeekableByteChannel channel) throws IOException {
-        this.channel = channel;
-        readHeader();
+    private JamboBlksV1(SeekableByteChannel fileChannel) throws IOException {
+        channel = fileChannel;
+        header = new JamboBlksV1Header();
+        header.read(channel);
+
+        blockCount = header.blockCount();
+        blockSize = header.blockSize();
     }
 
     @Override
@@ -71,13 +75,13 @@ public class JamboBlksV1 implements BlockStorage {
     @Override
     public void blockCount(int count) throws IOException {
         blockCount = count;
-        writeHeader();
+        header.blockCount(blockCount);
+        header.write(channel);
     }
 
     @Override
     public synchronized int createBlock() throws IOException {
-        blockCount++;
-        writeHeader();
+        blockCount(blockCount+1);
         return blockCount;
     }
 
@@ -95,7 +99,7 @@ public class JamboBlksV1 implements BlockStorage {
     @Override
     public synchronized void write(int index, ByteBuffer data) throws IOException {
         if (index >= blockCount) {
-            throw new IndexOutOfBoundsException("The block does not exists;");
+            throw new IndexOutOfBoundsException("The block does not exists");
         }
         if (data.remaining() > blockSize) {
             throw new IOException("Block overflow");
@@ -107,43 +111,7 @@ public class JamboBlksV1 implements BlockStorage {
     }
 
     private long findPosition(int index) {
-        return HEADER_SIZE + ((long) index * blockSize);
-    }
-
-    private void writeHeader() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE);
-        buffer.put(SIGN);
-        buffer.put(VERSION);
-        buffer.putInt(blockSize);
-        buffer.putInt(blockCount);
-        buffer.flip();
-        channel.position(0);
-        channel.write(buffer);
-    }
-
-    private void readHeader() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE);
-        channel.position(0);
-        int readed = channel.read(buffer);
-        if(readed != HEADER_SIZE) {
-            throw new IOException("invalid file");
-        }
-        buffer.flip();
-        validate(buffer);
-        blockSize = buffer.getInt();
-        blockCount = buffer.getInt();
-    }
-
-    private void validate(ByteBuffer buffer) throws IOException {
-        byte[] fileSign = new byte[SIGN.length];
-        byte[] fileVersion = new byte[VERSION.length];
-
-        buffer.get(fileSign);
-        buffer.get(fileVersion);
-
-        if(!Arrays.equals(fileSign, SIGN) || !Arrays.equals(fileVersion, VERSION)) {
-            throw new IOException("invalid file");
-        }
+        return JamboBlksV1Header.HEADER_SIZE + ((long) index * blockSize);
     }
 
     @Override
