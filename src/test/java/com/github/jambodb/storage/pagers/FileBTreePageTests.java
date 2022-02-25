@@ -1,9 +1,8 @@
 package com.github.jambodb.storage.pagers;
 
 import com.github.jambodb.storage.blocks.BlockStorage;
-import com.github.jambodb.storage.blocks.FileBlockStorage;
+import com.github.jambodb.storage.blocks.JamboBlksV1;
 import com.github.jambodb.storage.btrees.Serializer;
-import com.github.jambodb.storage.pagers.FileBTreePage;
 import com.github.jambodb.storage.btrees.mock.MockObject;
 import com.github.jambodb.storage.btrees.mock.MockObjectSerializer;
 import com.github.jambodb.storage.btrees.mock.StringSerializer;
@@ -41,12 +40,12 @@ public class FileBTreePageTests {
         page.value(0, mockObject);
         Path path = Files.createTempFile("jambodb.btree", ".test");
         Files.deleteIfExists(path);
-        try (BlockStorage blockStorage = FileBlockStorage.writeable(BLOCK_SIZE, path)) {
+        try (BlockStorage blockStorage = JamboBlksV1.writeable(BLOCK_SIZE, path)) {
             blockStorage.blockCount(2);
             page.fsync(blockStorage);
         }
 
-        try (BlockStorage blockStorage = FileBlockStorage.readable(path)) {
+        try (BlockStorage blockStorage = JamboBlksV1.readable(path)) {
             FileBTreePage<String, MockObject> readPage
                 = FileBTreePage.read(0, blockStorage, stringSerializer, mockSerializer);
             assertNotNull(readPage);

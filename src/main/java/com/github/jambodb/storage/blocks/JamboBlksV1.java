@@ -8,22 +8,11 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
-public class FileBlockStorage implements BlockStorage {
-    private static final int HEADER_SIZE = 8;
+public class JamboBlksV1 implements BlockStorage {
     private final SeekableByteChannel channel;
+    private JamboBlksV1Header header;
     private int blockSize;
     private int blockCount;
-
-    public FileBlockStorage(int blockSize, SeekableByteChannel channel) {
-        this.blockSize = blockSize;
-        this.blockCount = 0;
-        this.channel = channel;
-    }
-
-    public FileBlockStorage(SeekableByteChannel channel) throws IOException {
-        this.channel = channel;
-        readHeader();
-    }
 
     public static BlockStorage writeable(int blockSize, Path path) throws IOException {
         OpenOption[] options;
@@ -33,13 +22,13 @@ public class FileBlockStorage implements BlockStorage {
             options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE};
         }
         SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new FileBlockStorage(blockSize, channel);
+        return new JamboBlksV1(blockSize, channel);
     }
 
     public static BlockStorage readable(Path path) throws IOException {
         OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
         SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new FileBlockStorage(channel);
+        return new JamboBlksV1(channel);
     }
 
     public static BlockStorage readWrite(int blockSize, Path path) throws IOException {
@@ -50,7 +39,27 @@ public class FileBlockStorage implements BlockStorage {
             options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE};
         }
         SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new FileBlockStorage(blockSize, channel);
+        return new JamboBlksV1(blockSize, channel);
+    }
+
+    private JamboBlksV1(int size, SeekableByteChannel fileChannel) throws IOException {
+        channel = fileChannel;
+        blockSize = size;
+
+        header = new JamboBlksV1Header();
+        header.init();
+        header.blockSize(blockSize);
+        header.blockCount(0);
+        header.write(channel);
+    }
+
+    private JamboBlksV1(SeekableByteChannel fileChannel) throws IOException {
+        channel = fileChannel;
+        header = new JamboBlksV1Header();
+        header.read(channel);
+
+        blockCount = header.blockCount();
+        blockSize = header.blockSize();
     }
 
     @Override
@@ -66,13 +75,13 @@ public class FileBlockStorage implements BlockStorage {
     @Override
     public void blockCount(int count) throws IOException {
         blockCount = count;
-        writeHeader();
+        header.blockCount(blockCount);
+        header.write(channel);
     }
 
     @Override
     public synchronized int createBlock() throws IOException {
-        blockCount++;
-        writeHeader();
+        blockCount(blockCount+1);
         return blockCount;
     }
 
@@ -90,7 +99,7 @@ public class FileBlockStorage implements BlockStorage {
     @Override
     public synchronized void write(int index, ByteBuffer data) throws IOException {
         if (index >= blockCount) {
-            throw new IndexOutOfBoundsException("The block does not exists;");
+            throw new IndexOutOfBoundsException("The block does not exists");
         }
         if (data.remaining() > blockSize) {
             throw new IOException("Block overflow");
@@ -101,30 +110,12 @@ public class FileBlockStorage implements BlockStorage {
         data.flip();
     }
 
-    private long findPosition(int index) {
-        return HEADER_SIZE + ((long) index * blockSize);
-    }
-
-    private void writeHeader() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE);
-        buffer.putInt(blockSize);
-        buffer.putInt(blockCount);
-        buffer.flip();
-        channel.position(0);
-        channel.write(buffer);
-    }
-
-    private void readHeader() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE);
-        channel.position(0);
-        channel.read(buffer);
-        buffer.flip();
-        blockSize = buffer.getInt();
-        blockCount = buffer.getInt();
-    }
-
     @Override
     public void close() throws IOException {
         channel.close();
+    }
+
+    private long findPosition(int index) {
+        return JamboBlksV1Header.HEADER_SIZE + ((long) index * blockSize);
     }
 }
