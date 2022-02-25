@@ -110,12 +110,12 @@ public class JamboBlksV1 implements BlockStorage {
         data.flip();
     }
 
-    private long findPosition(int index) {
-        return JamboBlksV1Header.HEADER_SIZE + ((long) index * blockSize);
-    }
-
     @Override
     public void close() throws IOException {
         channel.close();
+    }
+
+    private long findPosition(int index) {
+        return JamboBlksV1Header.HEADER_SIZE + ((long) index * blockSize);
     }
 }
