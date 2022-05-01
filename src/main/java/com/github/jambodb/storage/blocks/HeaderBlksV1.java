@@ -8,25 +8,23 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-public class JamboBlksV1Header {
+import static com.github.jambodb.storage.blocks.BlockStorage.BLOCK_SIZE;
+
+class HeaderBlksV1 {
     private static final byte[] TITLE = "JamboBlks".getBytes(StandardCharsets.UTF_8);
 
     private static final byte[] VERSION = "v1".getBytes(StandardCharsets.UTF_8);
 
-    private static final int BLOCK_SIZE_POS = TITLE.length + VERSION.length;
+    private static final int BLOCK_COUNT_POS = TITLE.length + VERSION.length + 4;
 
-    private static final int BLOCK_COUNT_POS = BLOCK_SIZE_POS + 4;
-
-    public static final int HEADER_SIZE = 512;
-
-    private static final int CHECKSUM_SIZE_POS = HEADER_SIZE - 4;
+    private static final int DATA_POS = BLOCK_COUNT_POS + 4;
 
     private final MessageDigest digest;
 
-    private ByteBuffer content;
+    private final ByteBuffer content;
 
-    public JamboBlksV1Header() throws IOException {
-        content = ByteBuffer.allocate(JamboBlksV1Header.HEADER_SIZE);
+    public HeaderBlksV1() throws IOException {
+        content = ByteBuffer.allocate(BLOCK_SIZE);
         try {
             this.digest = MessageDigest.getInstance("MD5");
         }
@@ -49,78 +47,88 @@ public class JamboBlksV1Header {
         content.put(VERSION);
     }
 
-    public int blockSize() {
-        return content.getInt(BLOCK_SIZE_POS);
-    }
-
-    public void blockSize(int value) {
-        content.putInt(BLOCK_SIZE_POS, value);
-    }
-
-    public int blockCount() {
+    public int count() {
         return content.getInt(BLOCK_COUNT_POS);
     }
 
-    public void blockCount(int value) {
+    public void count(int value) {
         content.putInt(BLOCK_COUNT_POS, value);
     }
 
+    public void read(ByteBuffer data) {
+        int size = BLOCK_SIZE - DATA_POS - digest.getDigestLength();
+        data.put(content.array(), DATA_POS, Math.min(size, data.remaining()));
+        data.flip();
+    }
+
+    public void write(ByteBuffer data) throws IOException {
+        int size = BLOCK_SIZE - DATA_POS - digest.getDigestLength();
+        if (data.remaining() > size) {
+            throw new IOException("header data overflow");
+        }
+        content.position(DATA_POS);
+        content.put(data.array());
+    }
+
     public byte[] calcChecksum() {
-        byte[] dataBytes = new byte[8];
-        content.position(BLOCK_SIZE_POS);
+        byte[] dataBytes = new byte[BLOCK_SIZE - digest.getDigestLength() - BLOCK_COUNT_POS];
+        content.position(BLOCK_COUNT_POS);
         content.get(dataBytes);
         return digest.digest(dataBytes);
     }
 
     public byte[] checksum() {
-        int checksumSize = content.getInt(CHECKSUM_SIZE_POS);
-        byte[] data = new byte[checksumSize];
-        content.position(CHECKSUM_SIZE_POS - checksumSize);
+        int checksumPos = BLOCK_SIZE - digest.getDigestLength();
+        byte[] data = new byte[digest.getDigestLength()];
+        content.position(checksumPos);
         content.get(data);
         return data;
     }
 
     public void checksum(byte[] value) {
-        content.position(CHECKSUM_SIZE_POS - value.length);
+        if(value.length != digest.getDigestLength()) {
+            throw new IllegalArgumentException("invalid checksum");
+        }
+        int checksumPos = BLOCK_SIZE - digest.getDigestLength();
+        content.position(checksumPos);
         content.put(value);
-        content.putInt(CHECKSUM_SIZE_POS, value.length);
     }
 
     public void write(SeekableByteChannel channel) throws IOException {
         checksum(calcChecksum());
         channel.position(0);
         content.position(0);
-        if(content.remaining() != HEADER_SIZE) {
+        if(content.remaining() != BLOCK_SIZE) {
             throw new IOException("header overflow");
         }
-        if(channel.write(content) != HEADER_SIZE) {
-            throw new IOException("Invalid header size");
+        if(channel.write(content) != BLOCK_SIZE) {
+            throw new IOException("invalid header size");
         }
     }
 
     public void read(SeekableByteChannel channel) throws IOException {
         channel.position(0);
         content.position(0);
-        if(content.remaining() != HEADER_SIZE) {
+        if(content.remaining() != BLOCK_SIZE) {
             throw new IOException("header overflow");
         }
-        if(channel.read(content) != HEADER_SIZE) {
-            throw new IOException("Invalid header size");
+        if(channel.read(content) != BLOCK_SIZE) {
+            throw new IOException("invalid header size");
         }
 
         byte[] calc = calcChecksum();
         byte[] checksum = checksum();
 
         if(title() == null) {
-            throw new IOException("Invalid file format.");
+            throw new IOException("invalid file format.");
         }
 
         if(version() == null) {
-            throw new IOException("Invalid file version.");
+            throw new IOException("invalid file version.");
         }
 
         if(!Arrays.equals(calc, checksum)) {
-            throw new IOException("File header has been corrupted.");
+            throw new IOException("file header has been corrupted.");
         }
     }
 
