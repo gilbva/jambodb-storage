@@ -4,10 +4,10 @@ import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 public class FilePageBuffer {
-    private static final int POINTER_SIZE = 2;
-
     private static final short FLAG_IS_LEAF = 1;
 
     private static final int FLAGS_POS = 0;
@@ -20,22 +20,21 @@ public class FilePageBuffer {
 
     private ByteBuffer buffer;
 
-    private int elementSize;
+    private boolean isLeaf;
+
+    private Map<Short, byte[]> overflowMap;
 
     public FilePageBuffer(ByteBuffer buffer) {
         this.buffer = buffer;
-        this.elementSize = 3;
         short flags = readFlags();
-        if((flags & FLAG_IS_LEAF) != 0) {
-            this.elementSize = 2;
-        }
+        isLeaf = (flags & FLAG_IS_LEAF) != 0;
     }
 
     public FilePageBuffer(ByteBuffer buffer, boolean isLeaf) {
         this.buffer = buffer;
-        short flags = readFlags();
+        this.isLeaf = isLeaf;
         if(isLeaf) {
-            writeFlags((short) (flags | FLAG_IS_LEAF));
+            writeFlags(FLAG_IS_LEAF);
         }
         writeDataPointer((short) BlockStorage.BLOCK_SIZE);
     }
@@ -64,19 +63,73 @@ public class FilePageBuffer {
         buffer.putShort(DATA_POINTER_POS, value);
     }
 
-    public short readElementPointer(int element, int subElement) {
-        return buffer.getShort(elementPointerPos(element, subElement));
+    public int readChild(int index) {
+        return buffer.getInt(elementPos(index));
     }
 
-    public void writeElementPointer(int element, int subElement, short value) {
-        buffer.putShort(elementPointerPos(element, subElement), value);
+    public void writeChild(int index, int value) {
+        buffer.putInt(elementPos(index), value);
+    }
+
+    public int readKey(int index) {
+        int pos = isLeaf ? 4 : 0;
+        return buffer.getShort(elementPos(index) + pos);
+    }
+
+    public void writeKey(int index, short value) {
+        int pos = isLeaf ? 4 : 0;
+        buffer.putShort(elementPos(index) + pos, value);
+    }
+
+    public int readValue(int index) {
+        int pos = isLeaf ? 6 : 2;
+        return buffer.getShort(elementPos(index) + pos);
+    }
+
+    public void writeValue(int index, short value) {
+        int pos = isLeaf ? 6 : 2;
+        buffer.putShort(elementPos(index) + pos, value);
     }
 
     public <T> short appendValue(T value, Serializer<T> ser) {
-
+        int lastElementPos = lastElementPos();
+        int position = readDataPointer() - ser.size(value);
+        if(position < lastElementPos) {
+            return overflow(value, ser);
+        }
+        else {
+            buffer.position(position);
+            ser.write(buffer, value);
+            return (short) position;
+        }
     }
 
-    public int elementPointerPos(int element, int subElement) {
-        return ELEMENTS_POS + (element * elementSize * POINTER_SIZE) + (subElement * POINTER_SIZE);
+    private <T> short overflow(T value, Serializer<T> ser) {
+        if(overflowMap == null) {
+            overflowMap = new HashMap<>();
+        }
+
+        ByteBuffer bb = ByteBuffer.allocate(ser.size(value));
+        ser.write(bb, value);
+        var key = overflowMap.keySet()
+                                    .stream()
+                                    .min(Short::compareTo)
+                                    .orElse((short)0);
+        key--;
+        overflowMap.put(key,  bb.array());
+        return key;
+    }
+
+    public int elementPos(int index) {
+        int elementSize = isLeaf ? 8 : 4;
+        return ELEMENTS_POS + (index * elementSize);
+    }
+
+    public int lastElementPos() {
+        int size = readSize();
+        if(isLeaf) {
+            return size * 4;
+        }
+        return (size * 8) + 4;
     }
 }
