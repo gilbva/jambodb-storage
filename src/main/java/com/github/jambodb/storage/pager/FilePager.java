@@ -53,7 +53,6 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     @Override
     public void fsync() throws IOException {
         writeRoot();
-
     }
 
     public void writeRoot() throws IOException {
