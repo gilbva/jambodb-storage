@@ -13,12 +13,13 @@ public class FilePager<K, V> implements Pager<FileBTreePage<K, V>> {
     private int root;
 
     public FilePager(Path file, boolean init) throws IOException {
-        storage = BlockStorage.open(file, init);
         if(init) {
+            storage = BlockStorage.create(file);
             root = storage.increase();
             writeRoot();
         }
         else {
+            storage = BlockStorage.open(file);
             ByteBuffer buffer = ByteBuffer.allocate(4);
             storage.readHead(buffer);
             root = buffer.getInt();

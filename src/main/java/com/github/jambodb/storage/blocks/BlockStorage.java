@@ -22,17 +22,22 @@ public interface BlockStorage extends Closeable {
 
     int BLOCK_SIZE = 4096;
 
-    static BlockStorage open(Path path, boolean init) throws IOException {
+    static BlockStorage open(Path path) throws IOException {
+        OpenOption[] options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
+        SeekableByteChannel channel = Files.newByteChannel(path, options);
+        return new JamboBlksV1(channel, false);
+    }
+
+    static BlockStorage create(Path path) throws IOException {
         OpenOption[] options;
         if (Files.exists(path)) {
             options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
-            SeekableByteChannel channel = Files.newByteChannel(path, options);
-            return new JamboBlksV1(channel, init);
         } else {
             options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE};
-            SeekableByteChannel channel = Files.newByteChannel(path, options);
-            return new JamboBlksV1(channel, true);
         }
+        SeekableByteChannel channel = Files.newByteChannel(path, options);
+        return new JamboBlksV1(channel, true);
+
     }
 
     /**

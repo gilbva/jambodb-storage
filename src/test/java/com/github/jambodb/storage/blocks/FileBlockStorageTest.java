@@ -14,7 +14,7 @@ public class FileBlockStorageTest {
     @Test
     public void testFileBlockStorage() throws IOException {
         var raf = createFile();
-        var storage = BlockStorage.open(raf, true);
+        var storage = BlockStorage.create(raf);
 
         Assertions.assertThrows(Exception.class, () -> storage.read(0, ByteBuffer.allocate(storage.BLOCK_SIZE)));
         Assertions.assertThrows(Exception.class, () -> storage.write(0, ByteBuffer.allocate(storage.BLOCK_SIZE)));
@@ -27,7 +27,7 @@ public class FileBlockStorageTest {
             Assertions.assertEquals(toWrite, toRead);
         }
 
-        try(var readStorage = BlockStorage.open(raf, false)) {
+        try(var readStorage = BlockStorage.open(raf)) {
             Assertions.assertEquals(storage.count(), readStorage.count());
             for (int i = 0; i < 1000; i++) {
                 var toRead = ByteBuffer.allocate(readStorage.BLOCK_SIZE);
@@ -40,7 +40,7 @@ public class FileBlockStorageTest {
     @Test
     public void testFileBlockStorageWithIntValues() throws IOException {
         var raf = createFile();
-        try(var storage = BlockStorage.open(raf, true)) {
+        try(var storage = BlockStorage.create(raf)) {
 
             for (int i = 0; i < 10; i++) {
                 storage.increase();
@@ -52,7 +52,7 @@ public class FileBlockStorageTest {
                 Assertions.assertEquals(i, buffer.getInt());
             }
 
-            try (var readStorage = BlockStorage.open(raf, false)) {
+            try (var readStorage = BlockStorage.open(raf)) {
                 Assertions.assertEquals(storage.count(), readStorage.count());
                 for (int i = 0; i < 10; i++) {
                     var toRead = ByteBuffer.allocate(readStorage.BLOCK_SIZE);

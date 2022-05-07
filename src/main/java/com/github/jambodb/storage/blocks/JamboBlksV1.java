@@ -44,7 +44,7 @@ class JamboBlksV1 implements BlockStorage {
     @Override
     public synchronized int increase() throws IOException {
         count(count+1);
-        return count;
+        return count-1;
     }
 
     @Override

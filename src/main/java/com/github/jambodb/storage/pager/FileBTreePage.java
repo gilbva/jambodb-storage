@@ -3,7 +3,10 @@ package com.github.jambodb.storage.pager;
 import com.github.jambodb.storage.blocks.BlockStorage;
 import com.github.jambodb.storage.btrees.BTreePage;
 import com.github.jambodb.storage.btrees.Serializer;
+
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,11 +21,19 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private static final int SIZE_POS = 2;
 
-    private static final int DATA_POINTER_POS = 4;
+    private static final int AD_POINTER_POS = 4;
 
     private static final int USED_BYTES_POS = 6;
 
     private static final int ELEMENTS_POS = 8;
+
+    public static <K, V> FileBTreePage<K, V> create(BlockStorage storage, boolean isLeaf, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+        return new FileBTreePage<>(storage, isLeaf, keySer, valueSer);
+    }
+
+    public static <K, V> FileBTreePage<K, V> load(BlockStorage storage, int id, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+        return new FileBTreePage<>(storage, id, keySer, valueSer);
+    }
 
     private final int id;
 
@@ -34,34 +45,38 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private final Serializer<V> valueSer;
 
-    private boolean isLeaf;
+    private boolean leaf;
+
+    private boolean modified;
 
     private Map<Short, ByteBuffer> overflowMap;
 
-    public FileBTreePage(int id, ByteBuffer buffer, BlockStorage storage, Serializer<K> keySer, Serializer<V> valueSer) {
+    private FileBTreePage(BlockStorage storage, int id, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
         this.id = id;
-        this.buffer = buffer;
         this.storage = storage;
         this.keySer = keySer;
         this.valueSer = valueSer;
 
-        short flags = readFlags();
-        isLeaf = (flags & FLAG_IS_LEAF) != 0;
+        this.buffer = ByteBuffer.allocate(BlockStorage.BLOCK_SIZE);
+        this.storage.read(id, this.buffer);
+
+        leaf = (flags() & FLAG_IS_LEAF) != 0;
     }
 
-    public FileBTreePage(int id, ByteBuffer buffer, BlockStorage storage, Serializer<K> keySer, Serializer<V> valueSer, boolean isLeaf) {
-        this.id = id;
-        this.buffer = buffer;
+    private FileBTreePage(BlockStorage storage, boolean isLeaf, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
         this.storage = storage;
         this.keySer = keySer;
         this.valueSer = valueSer;
 
+        this.id = storage.increase();
+        this.buffer = ByteBuffer.allocate(BlockStorage.BLOCK_SIZE);
+
         if(isLeaf) {
-            writeFlags(FLAG_IS_LEAF);
+            flags(FLAG_IS_LEAF);
         }
-        writeUsedBytes((short) (BlockStorage.BLOCK_SIZE - lastElementPos() - 1));
-        writeSize((short) 0);
-        writeDataPointer((short) BlockStorage.BLOCK_SIZE);
+        adPointer((short)BlockStorage.BLOCK_SIZE);
+        usedBytes((short)0);
+        size(0);
     }
 
     @Override
@@ -71,17 +86,40 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public int size() {
-        return readSize();
+        return buffer.getShort(SIZE_POS);
     }
 
     @Override
     public void size(int value) {
-        writeSize((short) value);
+        int prevSize = size();
+
+        buffer.putShort(SIZE_POS, (short) value);
+
+        if(headerSize() > adPointer()) {
+            buffer.putShort(SIZE_POS, (short) prevSize);
+            defragment();
+            buffer.putShort(SIZE_POS, (short) value);
+        }
     }
 
     @Override
     public boolean isLeaf() {
-        return readFlags() == (short) 0;
+        return leaf;
+    }
+
+    public boolean isModified() {
+        return modified;
+    }
+
+    public void save() throws IOException {
+        if(isFragmented() && hasOverflow()) {
+            defragment();
+        }
+        if(hasOverflow()) {
+            throw new IOException("page overflow");
+        }
+        storage.write(id, buffer);
+        modified = false;
     }
 
     @Override
@@ -91,143 +129,111 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public boolean isHalf() {
-        int dataBytes = BlockStorage.BLOCK_SIZE - lastElementPos() - 1;
-        return readUsedBytes() < dataBytes;
+        return usedBytes() < (bodySize() / 3);
     }
 
     @Override
     public boolean canBorrow() {
-        return false;
+        return size() > 1 && usedBytes() > (bodySize() / 2);
     }
 
     @Override
     public K key(int index) {
-        return readData(readKey(index), keySer);
+        return readData(keyPos(index), keySer);
     }
 
     @Override
     public void key(int index, K data) {
-        removeData(readKey(index), keySer);
-        writeKey(index, appendData(data, keySer));
+        removeData(keyPos(index), keySer);
+        keyPos(index, appendData(data, keySer));
+        modified = true;
     }
 
     @Override
     public V value(int index) {
-        return readData(readValue(index), valueSer);
+        return readData(valuePos(index), valueSer);
     }
 
     @Override
     public void value(int index, V data) {
-        removeData(readValue(index), valueSer);
-        writeValue(index, appendData(data, valueSer));
+        removeData(valuePos(index), valueSer);
+        valuePos(index, appendData(data, valueSer));
+        modified = true;
     }
 
     @Override
     public int child(int index) {
-        return readChild(index);
+        return buffer.getInt(elementPos(index));
     }
 
     @Override
     public void child(int index, int id) {
-        writeChild(index, id);
+        buffer.putInt(elementPos(index), id);
+        modified = true;
     }
 
-
-    public short readFlags() {
+    private short flags() {
         return buffer.getShort(FLAGS_POS);
     }
 
-    public void writeFlags(short value) {
+    private void flags(short value) {
         buffer.putShort(FLAGS_POS, value);
     }
 
-    public short readSize() {
-        return buffer.getShort(SIZE_POS);
+    private short adPointer() {
+        return buffer.getShort(AD_POINTER_POS);
     }
 
-    public void writeSize(short value) {
-        buffer.putShort(SIZE_POS, value);
+    private void adPointer(short value) {
+        buffer.putShort(AD_POINTER_POS, value);
     }
 
-    public short readDataPointer() {
-        return buffer.getShort(DATA_POINTER_POS);
-    }
-
-    public void writeDataPointer(short value) {
-        buffer.putShort(DATA_POINTER_POS, value);
-    }
-
-    public short readUsedBytes() {
+    private short usedBytes() {
         return buffer.getShort(USED_BYTES_POS);
     }
 
-    public void writeUsedBytes(short value) {
+    private void usedBytes(short value) {
         buffer.putShort(USED_BYTES_POS, value);
     }
 
-    public int readChild(int index) {
-        return buffer.getInt(elementPos(index));
-    }
-
-    public void writeChild(int index, int value) {
-        buffer.putInt(elementPos(index), value);
-    }
-
-    public int readKey(int index) {
-        int pos = isLeaf ? 4 : 0;
+    private int keyPos(int index) {
+        int pos = leaf ? 0 : 4;
         return buffer.getShort(elementPos(index) + pos);
     }
 
-    public void writeKey(int index, short value) {
-        int pos = isLeaf ? 4 : 0;
+    private void keyPos(int index, short value) {
+        int pos = leaf ? 0 : 4;
         buffer.putShort(elementPos(index) + pos, value);
     }
 
-    public int readValue(int index) {
-        int pos = isLeaf ? 6 : 2;
+    private int valuePos(int index) {
+        int pos = leaf ? 6 : 2;
         return buffer.getShort(elementPos(index) + pos);
     }
 
-    public void writeValue(int index, short value) {
-        int pos = isLeaf ? 6 : 2;
+    private void valuePos(int index, short value) {
+        int pos = leaf ? 6 : 2;
         buffer.putShort(elementPos(index) + pos, value);
     }
 
-    public <T> short appendData(T value, Serializer<T> ser) {
-        int lastElementPos = lastElementPos();
-        int bytes = ser.size(value);
-        int position = readDataPointer() - bytes;
-        if(position < lastElementPos) {
+    private <T> short appendData(T value, Serializer<T> ser) {
+        int byteCount = ser.size(value);
+        if(byteCount > BlockStorage.BLOCK_SIZE / 4) {
+            throw new IllegalArgumentException("invalid data size");
+        }
+        int position = adPointer() - byteCount;
+        if(position < headerSize()) {
             return overflow(value, ser);
         }
 
         buffer.position(position);
         ser.write(buffer, value);
-        writeDataPointer((short) position);
-        writeUsedBytes((short) (readUsedBytes() - bytes));
+        adPointer((short) position);
+        usedBytes((short) (usedBytes() + byteCount));
         return (short) position;
     }
 
-    public void defrag() {
-        int bufferSize = BlockStorage.BLOCK_SIZE - lastElementPos();
-        ByteBuffer tempBuffer = ByteBuffer.allocate(bufferSize);
-        tempBuffer.position(bufferSize - 1);
-        int size = readSize();
-        List<K> keys = new ArrayList<>(size);
-        List<V> values = new ArrayList<>(size);
-        for(int i = 0; i < size; i++) {
-            keys.add(readData(readKey(i), keySer));
-            values.add(readData(readValue(i), valueSer));
-        }
-        writeDataPointer((short) BlockStorage.BLOCK_SIZE);
-        overflowMap = null;
-        for(int i = 0; i < size; i++) {
-            writeKey(i, appendData(keys.get(i), keySer));
-            writeValue(i, appendData(values.get(i), valueSer));
-        }
-    }
-
-    public <T> T readData(int position, Serializer<T> ser) {
+    private <T> T readData(int position, Serializer<T> ser) {
         if(position < 0) {
             ByteBuffer buffer = overflowMap.get((short) position);
             buffer.position(0);
@@ -239,11 +245,35 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         }
     }
 
-    public <T> void removeData(int position, Serializer<T> ser) {
-        buffer.position(position);
-        int bytes = ser.size(buffer);
-        writeUsedBytes((short) (readUsedBytes() + bytes));
-        writeFlags((short) (readFlags() | FLAG_IS_FRAG));
+    private <T> void removeData(int position, Serializer<T> ser) {
+        if(position < 0) {
+            overflowMap.remove((short) position);
+        }
+        else {
+            buffer.position(position);
+            int bytes = ser.size(buffer);
+            usedBytes((short) (usedBytes() - bytes));
+            setFragmented(true);
+        }
+    }
+
+    private void defragment() {
+        System.out.println("defrag");
+        int size = size();
+        List<K> keys = new ArrayList<>(size);
+        List<V> values = new ArrayList<>(size);
+        for(int i = 0; i < size; i++) {
+            keys.add(readData(keyPos(i), keySer));
+            values.add(readData(valuePos(i), valueSer));
+        }
+        usedBytes((short) 0);
+        adPointer((short) BlockStorage.BLOCK_SIZE);
+        overflowMap = null;
+        for(int i = 0; i < size; i++) {
+            keyPos(i, appendData(keys.get(i), keySer));
+            valuePos(i, appendData(values.get(i), valueSer));
+        }
+        setFragmented(false);
     }
 
     private <T> short overflow(T value, Serializer<T> ser) {
@@ -262,24 +292,37 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         return key;
     }
 
-    public int elementPos(int index) {
-        int elementSize = isLeaf ? 8 : 4;
+    private int elementPos(int index) {
+        int elementSize = leaf ? 8 : 4;
         return ELEMENTS_POS + (index * elementSize);
     }
 
-    public int lastElementPos() {
-        int size = readSize();
-        if(isLeaf) {
-            return ELEMENTS_POS + size * 4;
+    private int headerSize() {
+        int size = size();
+        if(leaf) {
+            return ELEMENTS_POS + (size * 4);
         }
         return ELEMENTS_POS + (size * 8) + 4;
     }
 
-    public boolean hasOverflow() {
+    private int bodySize() {
+        return BlockStorage.BLOCK_SIZE - headerSize();
+    }
+
+    private boolean hasOverflow() {
         return overflowMap != null;
     }
 
-    public boolean isFrag() {
-        return (readFlags() & FLAG_IS_FRAG) != 0;
+    private void setFragmented(boolean isFrag) {
+        if(isFrag) {
+            flags((short) (flags() | FLAG_IS_FRAG));
+        }
+        else {
+            flags((short) (flags() & ~FLAG_IS_FRAG));
+        }
+    }
+
+    private boolean isFragmented() {
+        return (flags() & FLAG_IS_FRAG) != 0;
     }
 }

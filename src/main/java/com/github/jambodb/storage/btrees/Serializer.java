@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
  * @param <T> the type this serializer manages.
  */
 public interface Serializer<T> {
-    int size(ByteBuffer value);
+    int size(ByteBuffer buffer);
 
     int size(T value);
 
