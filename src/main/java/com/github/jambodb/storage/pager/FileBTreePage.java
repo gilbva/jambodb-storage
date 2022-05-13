@@ -6,7 +6,6 @@ import com.github.jambodb.storage.btrees.Serializer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -70,6 +69,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
         this.id = storage.increase();
         this.buffer = ByteBuffer.allocate(BlockStorage.BLOCK_SIZE);
+        this.leaf = isLeaf;
 
         if(isLeaf) {
             flags(FLAG_IS_LEAF);
@@ -100,6 +100,12 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             defragment();
             buffer.putShort(SIZE_POS, (short) value);
         }
+
+        for(int i = prevSize; i <= value; i++) {
+            keyPos(i, (short)0);
+            valuePos(i, (short)0);
+            child(i+1, 0);
+        }
     }
 
     @Override
@@ -118,6 +124,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         if(hasOverflow()) {
             throw new IOException("page overflow");
         }
+        buffer.position(0);
         storage.write(id, buffer);
         modified = false;
     }
@@ -156,7 +163,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void value(int index, V data) {
-        removeData(valuePos(index), valueSer);
+        int pos = valuePos(index);
+        removeData(pos, valueSer);
         valuePos(index, appendData(data, valueSer));
         modified = true;
     }
@@ -207,13 +215,15 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     private int valuePos(int index) {
-        int pos = leaf ? 6 : 2;
-        return buffer.getShort(elementPos(index) + pos);
+        int relPos = leaf ? 2 : 6;
+        int bytePos = elementPos(index) + relPos;
+        return buffer.getShort(bytePos);
     }
 
     private void valuePos(int index, short value) {
-        int pos = leaf ? 6 : 2;
-        buffer.putShort(elementPos(index) + pos, value);
+        int relPos = leaf ? 2 : 6;
+        int buffPos = elementPos(index) + relPos;
+        buffer.putShort(buffPos, value);
     }
 
     private <T> short appendData(T value, Serializer<T> ser) {
@@ -222,7 +232,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             throw new IllegalArgumentException("invalid data size");
         }
         int position = adPointer() - byteCount;
-        if(position < headerSize()) {
+        if(position <= headerSize()) {
             return overflow(value, ser);
         }
 
@@ -234,6 +244,9 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     private <T> T readData(int position, Serializer<T> ser) {
+        if(position == 0) {
+            throw new IllegalArgumentException("invalid position");
+        }
         if(position < 0) {
             ByteBuffer buffer = overflowMap.get((short) position);
             buffer.position(0);
@@ -246,6 +259,10 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     private <T> void removeData(int position, Serializer<T> ser) {
+        if(position == 0) {
+            return;
+        }
+
         if(position < 0) {
             overflowMap.remove((short) position);
         }
@@ -293,7 +310,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     private int elementPos(int index) {
-        int elementSize = leaf ? 8 : 4;
+        int elementSize = leaf ? 4 : 8;
         return ELEMENTS_POS + (index * elementSize);
     }
 
