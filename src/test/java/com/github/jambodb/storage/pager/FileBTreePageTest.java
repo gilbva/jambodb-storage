@@ -5,10 +5,10 @@ import com.github.jambodb.storage.types.IntegerSerializer;
 import com.github.jambodb.storage.types.SmallStringSerializer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +31,7 @@ public class FileBTreePageTest {
         var storage = BlockStorage.create(tmpFile);
         var page = FileBTreePage.create(storage, leaf, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
         List<String> lst = new ArrayList<>();
+        short usedBytes = 0;
         for (int i = 0; !page.isFull(); i++) {
             lst.add(UUID.randomUUID().toString());
 
@@ -39,10 +40,14 @@ public class FileBTreePageTest {
             Assertions.assertTrue(page.isModified());
 
             page.key(i, lst.get(i));
+            usedBytes += lst.get(i).getBytes(StandardCharsets.UTF_8).length + 2;
+            Assertions.assertEquals(usedBytes, page.usedBytes());
             Assertions.assertEquals(lst.get(i), page.key(i));
             Assertions.assertTrue(page.isModified());
 
             page.value(i, i*2);
+            usedBytes += 4;
+            Assertions.assertEquals(usedBytes, page.usedBytes());
             Assertions.assertEquals(i*2, page.value(i));
             Assertions.assertTrue(page.isModified());
 
