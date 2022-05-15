@@ -217,7 +217,9 @@ public final class BTree<K extends Comparable<K>, V> {
             if (result.page.isHalf()) {
                 fill(result.page, ancestors);
             }
+            return;
         }
+        throw new IOException("element not found");
     }
 
     /**

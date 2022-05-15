@@ -88,11 +88,13 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public int size() {
+        checkDeleted();
         return buffer.getShort(SIZE_POS);
     }
 
     @Override
     public void size(int value) {
+        checkDeleted();
         int prevSize = size();
 
         buffer.putShort(SIZE_POS, (short) value);
@@ -125,6 +127,8 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     public void setDeleted(boolean deleted) {
         if(deleted) {
+            size(0);
+            overflowMap = null;
             flags((short) (flags() | FLAG_IS_DELETED));
         }
         else {
@@ -134,11 +138,13 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     public void save() throws IOException {
-        if(hasOverflow()) {
-            defragment(size());
-        }
-        if(hasOverflow()) {
-            throw new IOException("page overflow: usedBytes: " + usedBytes() + ", bodySize: " + bodySize());
+        if(!isDeleted()) {
+            if (hasOverflow()) {
+                defragment(size());
+            }
+            if (hasOverflow()) {
+                throw new IOException("page overflow: usedBytes: " + usedBytes() + ", bodySize: " + bodySize());
+            }
         }
         buffer.position(0);
         storage.write(id, buffer);
@@ -147,21 +153,25 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public boolean isFull() {
+        checkDeleted();
         return usedBytes() >= bodySize();
     }
 
     @Override
     public boolean isHalf() {
+        checkDeleted();
         return usedBytes() < (bodySize() / 4);
     }
 
     @Override
     public boolean canBorrow() {
+        checkDeleted();
         return size() > 2 && usedBytes() > (bodySize() / 2);
     }
 
     @Override
     public K key(int index) {
+        checkDeleted();
         if(index < 0 || index >= size()) {
             throw new IllegalArgumentException("invalid index=" + index + ", size=" + size());
         }
@@ -170,6 +180,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void key(int index, K data) {
+        checkDeleted();
         if(index < 0 || index >= size()) {
             throw new IllegalArgumentException("invalid index=" + index + ", size=" + size());
         }
@@ -181,6 +192,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public V value(int index) {
+        checkDeleted();
         if(index < 0 || index >= size()) {
             throw new IllegalArgumentException("invalid index=" + index + ", size=" + size());
         }
@@ -190,6 +202,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void value(int index, V data) {
+        checkDeleted();
         if(index < 0 || index >= size()) {
             throw new IllegalArgumentException("invalid index=" + index + ", size=" + size());
         }
@@ -202,6 +215,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void swap(int i, int j) {
+        checkDeleted();
         short key = keyPos(i);
         short value = valuePos(i);
 
@@ -214,6 +228,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public int child(int index) {
+        checkDeleted();
         if(leaf) {
             throw new UnsupportedOperationException("child operations are not allowed on leaf pages");
         }
@@ -226,6 +241,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void child(int index, int id) {
+        checkDeleted();
         if(leaf) {
             throw new UnsupportedOperationException("child operations are not allowed on leaf pages");
         }
@@ -246,14 +262,17 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     private short adPointer() {
+        checkDeleted();
         return buffer.getShort(AD_POINTER_POS);
     }
 
     private void adPointer(short value) {
+        checkDeleted();
         buffer.putShort(AD_POINTER_POS, value);
     }
 
     public short usedBytes() {
+        checkDeleted();
         return buffer.getShort(USED_BYTES_POS);
     }
 
@@ -296,9 +315,6 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         }
 
         short position = (short)(adPointer() - byteCount);
-        if(position == 918) {
-            System.out.println("appendData position 918, page=" + id);
-        }
         if(position <= headerSize()) {
             position = overflow(value, ser);
         }
@@ -439,5 +455,11 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private boolean isFragmented() {
         return (flags() & FLAG_IS_FRAG) != 0;
+    }
+
+    private void checkDeleted() {
+        if(isDeleted()) {
+            throw new IllegalStateException("page is deleted");
+        }
     }
 }

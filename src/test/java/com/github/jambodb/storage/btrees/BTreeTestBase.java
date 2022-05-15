@@ -21,17 +21,31 @@ public class BTreeTestBase {
 
         for (var entry : tree.entrySet()) {
             V value = bTree.get(entry.getKey());
-            System.out.println(entry.getKey() + ": " + entry.getValue() + " => " + value);
             Assertions.assertEquals(entry.getValue(), value);
         }
 
         for (var key : tree.keySet()) {
             bTree.remove(key);
+            if(bTree.get(key) != null) {
+                System.out.println(key + " => " + bTree.get(key));
+            }
+            Assertions.assertNull(bTree.get(key));
+        }
+
+        System.out.println("before sync");
+        for (var key : tree.keySet()) {
+            if(bTree.get(key) != null) {
+                System.out.println(key + " => " + bTree.get(key));
+            }
             Assertions.assertNull(bTree.get(key));
         }
         pager.fsync();
 
+        System.out.println("after sync");
         for (var key : tree.keySet()) {
+            if(bTree.get(key) != null) {
+                System.out.println(key + " => " + bTree.get(key));
+            }
             Assertions.assertNull(bTree.get(key));
         }
 
