@@ -21,6 +21,7 @@ public class BTreeTestBase {
 
         for (var entry : tree.entrySet()) {
             V value = bTree.get(entry.getKey());
+            System.out.println(entry.getKey() + ": " + entry.getValue() + " => " + value);
             Assertions.assertEquals(entry.getValue(), value);
         }
 

@@ -21,6 +21,9 @@ public class SmallStringSerializer implements Serializer<String> {
     @Override
     public String read(ByteBuffer buffer) {
         int size = buffer.getShort();
+        if(size < 0) {
+            throw new IllegalArgumentException("invalid length");
+        }
         byte[] bytes = new byte[size];
         buffer.get(bytes);
         return new String(bytes, StandardCharsets.UTF_8);
@@ -29,7 +32,11 @@ public class SmallStringSerializer implements Serializer<String> {
     @Override
     public void write(ByteBuffer buffer, String value) {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-        buffer.putShort((short) (bytes.length));
+        short len = (short) (bytes.length);
+        if(len < 0) {
+            throw new IllegalArgumentException("invalid length");
+        }
+        buffer.putShort(len);
         buffer.put(bytes);
     }
 }

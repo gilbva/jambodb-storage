@@ -36,7 +36,7 @@ public interface BTreePage<K, V> {
     boolean isLeaf();
 
     /**
-     * Determines if the page does not has space to hold more elements.
+     * Determines if the page has exceeded its capacity for holding new elements.
      *
      * @return true the page is full, false otherwise.
      */
@@ -52,7 +52,7 @@ public interface BTreePage<K, V> {
     /**
      * Determines if the page can borrow one element to a sibling page.
      *
-     * @return true if a least one element can be borrowed, false otherwise.
+     * @return true if at least one element can be borrowed, false otherwise.
      */
     boolean canBorrow();
 
@@ -79,6 +79,14 @@ public interface BTreePage<K, V> {
      * @return the value of the given element.
      */
     V value(int index);
+
+    /**
+     * Swaps the ith element with the jth element.
+     *
+     * @param i the first element.
+     * @param j the second element.
+     */
+    void swap(int i, int j);
 
     /**
      * Sets the value for the element at the given index.

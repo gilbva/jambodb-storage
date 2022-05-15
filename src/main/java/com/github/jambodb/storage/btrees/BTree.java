@@ -773,8 +773,7 @@ public final class BTree<K extends Comparable<K>, V> {
         page.size(page.size() + 1);
         for (int i = page.size(); i > index; i--) {
             if (i < page.size()) {
-                page.key(i, page.key(i - 1));
-                page.value(i, page.value(i - 1));
+                page.swap(i, i - 1);
             }
             if (!page.isLeaf()) {
                 page.child(i, page.child(i - 1));
@@ -792,8 +791,7 @@ public final class BTree<K extends Comparable<K>, V> {
     void deletePlace(BTreePage<K, V> page, int index) {
         for (int i = index; i < page.size(); i++) {
             if (i < page.size() - 1) {
-                page.key(i, page.key(i + 1));
-                page.value(i, page.value(i + 1));
+                page.swap(i, i + 1);
             }
             if (!page.isLeaf()) {
                 page.child(i, page.child(i + 1));

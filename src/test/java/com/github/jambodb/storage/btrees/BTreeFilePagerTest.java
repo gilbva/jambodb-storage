@@ -17,6 +17,8 @@ public class BTreeFilePagerTest extends BTreeTestBase {
     @TestFactory
     public Collection<DynamicTest> testBTree() {
         List<DynamicTest> lst = new ArrayList<>();
+        lst.add(DynamicTest.dynamicTest("testing btree size=" + 10000, () -> doTest(10000)));
+        /*
         for (int i = 0; i < 100; i++) {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing btree size=" + size, () -> doTest(size)));
@@ -26,6 +28,7 @@ public class BTreeFilePagerTest extends BTreeTestBase {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing btree size=" + size, () -> doTest(size)));
         }
+        */
 
         return lst;
     }
@@ -58,8 +61,8 @@ public class BTreeFilePagerTest extends BTreeTestBase {
                 {6, 9}
         });
 
-        testBTree(expectedStiTree, strToInt, strQueries);
         testBTree(expectedItsTree, intToStr, intQueries);
+        testBTree(expectedStiTree, strToInt, strQueries);
     }
 
 }

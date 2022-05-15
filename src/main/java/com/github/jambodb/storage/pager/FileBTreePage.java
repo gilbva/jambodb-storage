@@ -98,15 +98,15 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         buffer.putShort(SIZE_POS, (short) value);
 
         if(headerSize() > adPointer()) {
-            buffer.putShort(SIZE_POS, (short) prevSize);
-            defragment();
-            buffer.putShort(SIZE_POS, (short) value);
+            defragment(prevSize);
         }
 
         for(int i = prevSize; i < value; i++) {
             keyPos(i, (short)0);
             valuePos(i, (short)0);
-            child(i+1, 0);
+            if(!leaf) {
+                child(i + 1, 0);
+            }
         }
     }
 
@@ -135,7 +135,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     public void save() throws IOException {
         if(hasOverflow()) {
-            defragment();
+            defragment(size());
         }
         if(hasOverflow()) {
             throw new IOException("page overflow: usedBytes: " + usedBytes() + ", bodySize: " + bodySize());
@@ -147,7 +147,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public boolean isFull() {
-        return usedBytes() >= (bodySize() - 100);
+        return usedBytes() >= bodySize();
     }
 
     @Override
@@ -201,7 +201,22 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     @Override
+    public void swap(int i, int j) {
+        short key = keyPos(i);
+        short value = valuePos(i);
+
+        keyPos(i, keyPos(j));
+        valuePos(i, valuePos(j));
+
+        keyPos(j, key);
+        valuePos(j, value);
+    }
+
+    @Override
     public int child(int index) {
+        if(leaf) {
+            throw new UnsupportedOperationException("child operations are not allowed on leaf pages");
+        }
         if(index < 0 || index > size()) {
             throw new IllegalArgumentException("invalid index=" + index + ", size=" + size());
         }
@@ -211,6 +226,9 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     @Override
     public void child(int index, int id) {
+        if(leaf) {
+            throw new UnsupportedOperationException("child operations are not allowed on leaf pages");
+        }
         if(index < 0 || index > size()) {
             throw new IllegalArgumentException("invalid index=" + index + ", size=" + size());
         }
@@ -243,7 +261,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         buffer.putShort(USED_BYTES_POS, value);
     }
 
-    private int keyPos(int index) {
+    private short keyPos(int index) {
         int pos = leaf ? 0 : 4;
         return buffer.getShort(elementPos(index) + pos);
     }
@@ -256,7 +274,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         buffer.putShort(elementPos(index) + pos, value);
     }
 
-    private int valuePos(int index) {
+    private short valuePos(int index) {
         int relPos = leaf ? 2 : 6;
         int bytePos = elementPos(index) + relPos;
         return buffer.getShort(bytePos);
@@ -278,6 +296,9 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         }
 
         short position = (short)(adPointer() - byteCount);
+        if(position == 918) {
+            System.out.println("appendData position 918, page=" + id);
+        }
         if(position <= headerSize()) {
             position = overflow(value, ser);
         }
@@ -295,15 +316,28 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         if(position == 0 || position >= BlockStorage.BLOCK_SIZE) {
             throw new IllegalArgumentException("invalid position: " + position);
         }
+
+        T result = null;
         if(position < 0) {
             ByteBuffer buffer = overflowMap.get((short) position);
             buffer.position(0);
-            return ser.read(buffer);
+            result = ser.read(buffer);
         }
         else {
             buffer.position(position);
-            return ser.read(buffer);
+            try {
+                result = ser.read(buffer);
+            }
+            catch (IllegalArgumentException ex) {
+                System.out.println(ex.getMessage() + " position=" + position + " page=" + id);
+                throw ex;
+            }
         }
+
+        if(result == null) {
+            throw new IllegalStateException("could not read correct value");
+        }
+        return result;
     }
 
     private <T> void removeData(int position, Serializer<T> ser) {
@@ -330,9 +364,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         usedBytes((short) (usedBytes() - bytes));
     }
 
-    private void defragment() {
-        int size = size();
-
+    private void defragment(int size) {
         System.out.println("[DEFRAG] page=" + id + ", usedBytes=" + usedBytes() + ", bodySize=" + bodySize() + ", size=" + size());
         List<K> keys = new ArrayList<>(size);
         List<V> values = new ArrayList<>(size);
