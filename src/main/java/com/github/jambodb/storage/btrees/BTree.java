@@ -123,7 +123,7 @@ public final class BTree<K extends Comparable<K>, V> {
     /**
      * A reference to the root page of the tree.
      */
-    BTreePage<K, V> root;
+    int root;
 
     /**
      * The constructor builds a BTree instance for the given page storage.
@@ -133,10 +133,10 @@ public final class BTree<K extends Comparable<K>, V> {
      */
     public BTree(Pager<BTreePage<K, V>> pager) throws IOException {
         this.pager = pager;
-        this.root = pager.page(pager.root());
-        if (this.root == null) {
-            this.root = pager.create(true);
-            pager.root(this.root.id());
+        this.root = pager.root();
+        if (this.root <= 0) {
+            this.root = pager.create(true).id();
+            pager.root(this.root);
         }
     }
 
@@ -232,7 +232,8 @@ public final class BTree<K extends Comparable<K>, V> {
      * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     public Iterator<BTreeEntry<K, V>> query(K from, K to) throws IOException {
-        if (root.isLeaf() && root.size() == 0) {
+        var rootPage = pager.page(root);
+        if (rootPage.isLeaf() && rootPage.size() == 0) {
             return Collections.emptyIterator();
         }
 
@@ -278,7 +279,8 @@ public final class BTree<K extends Comparable<K>, V> {
      */
     private Node<K, V> startingNode(K from, K to, Deque<Node<K, V>> ancestors) throws IOException {
         if(from == null) {
-            return first(root, ancestors);
+            var rootPage = pager.page(root);
+            return first(rootPage, ancestors);
         }
 
         if(to != null && from.compareTo(to) > 0) {
@@ -446,7 +448,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @throws IOException thrown by the Pager interface if any I/O errors occur.
      */
     Result<K, V> lookup(K key, Deque<Node<K, V>> ancestors) throws IOException {
-        var current = root;
+        var current = pager.page(root);
         while (!current.isLeaf()) {
             var result = search(current, key);
             if (result.found) {
@@ -556,10 +558,10 @@ public final class BTree<K extends Comparable<K>, V> {
      */
     Node<K, V> grow() throws IOException {
         var newRoot = pager.create(false);
-        newRoot.child(0, root.id());
-        root = newRoot;
-        pager.root(root.id());
-        return new Node<>(root, 0);
+        newRoot.child(0, root);
+        root = newRoot.id();
+        pager.root(root);
+        return new Node<>(newRoot, 0);
     }
 
     /**
@@ -568,10 +570,11 @@ public final class BTree<K extends Comparable<K>, V> {
      * @throws IOException if any I/O error occurs while removing the root page or setting the new root page in the pager.
      */
     void shrink() throws IOException {
-        if (root.size() == 0 && !root.isLeaf()) {
-            pager.remove(root.id());
-            root = getChildPage(root, 0);
-            pager.root(root.id());
+        var oldRoot = pager.create(false);
+        if (oldRoot.size() == 0 && !oldRoot.isLeaf()) {
+            root = oldRoot.child(0);
+            pager.root(root);
+            pager.remove(oldRoot.id());
         }
     }
 

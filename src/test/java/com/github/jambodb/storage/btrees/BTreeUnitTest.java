@@ -53,15 +53,15 @@ public class BTreeUnitTest {
         MockPager<String, Integer> pager = new MockPager<>(3);
         BTree<String, Integer> btree = new BTree<>(pager);
 
-        var rootId = btree.root.id();
+        var rootId = btree.root;
         btree.grow();
-        Assertions.assertNotEquals(rootId, btree.root.id());
-        Assertions.assertEquals(pager.root(), btree.root.id());
-        Assertions.assertEquals(rootId, btree.root.child(0));
+        Assertions.assertNotEquals(rootId, btree.root);
+        Assertions.assertEquals(pager.root(), btree.root);
+        Assertions.assertEquals(rootId, pager.page(btree.root).child(0));
 
         btree.shrink();
-        Assertions.assertEquals(rootId, btree.root.id());
-        Assertions.assertEquals(pager.root(), btree.root.id());
+        Assertions.assertEquals(rootId, btree.root);
+        Assertions.assertEquals(pager.root(), btree.root);
     }
 
     @TestFactory

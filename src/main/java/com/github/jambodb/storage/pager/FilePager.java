@@ -58,6 +58,9 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     @Override
     public FileBTreePage<K, V> page(int id) throws IOException {
+        if(id == 0) {
+            throw new IllegalArgumentException("invalid id " + id);
+        }
         if(pagesCache.containsKey(id)) {
             return pagesCache.get(id);
         }
@@ -76,6 +79,9 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     @Override
     public void remove(int id) throws IOException {
+        if(id == 0) {
+            throw new IllegalArgumentException("invalid id " + id);
+        }
         page(id).setDeleted(true);
     }
 

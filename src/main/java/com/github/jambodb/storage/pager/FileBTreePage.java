@@ -59,7 +59,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         this.valueSer = valueSer;
 
         this.buffer = ByteBuffer.allocate(BlockStorage.BLOCK_SIZE);
-        this.storage.read(id, this.buffer);
+        this.storage.read(id-1, this.buffer);
 
         leaf = (flags() & FLAG_IS_LEAF) != 0;
     }
@@ -69,7 +69,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         this.keySer = keySer;
         this.valueSer = valueSer;
 
-        this.id = storage.increase();
+        this.id = storage.increase()+1;
         this.buffer = ByteBuffer.allocate(BlockStorage.BLOCK_SIZE);
         this.leaf = isLeaf;
 
@@ -97,18 +97,39 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         checkDeleted();
         int prevSize = size();
 
-        buffer.putShort(SIZE_POS, (short) value);
-
-        if(headerSize() > adPointer()) {
-            defragment(prevSize);
+        if(prevSize == value) {
+            return;
         }
 
-        for(int i = prevSize; i < value; i++) {
-            keyPos(i, (short)0);
-            valuePos(i, (short)0);
-            if(!leaf) {
-                child(i + 1, 0);
+        if(prevSize < value) {
+            buffer.putShort(SIZE_POS, (short) value);
+            if(headerSize() > adPointer()) {
+                defragment(prevSize);
             }
+
+            for (int i = prevSize; i < value; i++) {
+                resetElement(i);
+            }
+        }
+        else {
+            for (int i = value; i < prevSize; i++) {
+                removeElement(i);
+                resetElement(i);
+            }
+            buffer.putShort(SIZE_POS, (short) value);
+        }
+    }
+
+    private void removeElement(int i) {
+        removeData(keyPos(i), keySer);
+        removeData(valuePos(i), valueSer);
+    }
+
+    private void resetElement(int i) {
+        keyPos(i, (short) 0);
+        valuePos(i, (short) 0);
+        if (!leaf) {
+            child(i + 1, 0);
         }
     }
 
@@ -128,13 +149,15 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     public void setDeleted(boolean deleted) {
         if(deleted) {
             size(0);
+            adPointer((short)BlockStorage.BLOCK_SIZE);
+            usedBytes((short)0);
             overflowMap = null;
             flags((short) (flags() | FLAG_IS_DELETED));
         }
         else {
             flags((short) (flags() & ~FLAG_IS_FRAG));
         }
-        modified = false;
+        modified = true;
     }
 
     public void save() throws IOException {
@@ -147,7 +170,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             }
         }
         buffer.position(0);
-        storage.write(id, buffer);
+        storage.write(id-1, buffer);
         modified = false;
     }
 
@@ -381,7 +404,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     private void defragment(int size) {
-        System.out.println("[DEFRAG] page=" + id + ", usedBytes=" + usedBytes() + ", bodySize=" + bodySize() + ", size=" + size());
+        System.out.println("[DEFRAG] page=" + id + ", size=" + size() + " usedBytes=" + usedBytes() + ", bodySize=" + bodySize() + ", size=" + size());
         List<K> keys = new ArrayList<>(size);
         List<V> values = new ArrayList<>(size);
         for(int i = 0; i < size; i++) {
@@ -396,7 +419,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             valuePos(i, appendData(values.get(i), valueSer));
         }
         setFragmented(false);
-        System.out.println("[DEFRAG-END] page=" + id + ", usedBytes=" + usedBytes() + ", bodySize=" + bodySize() + ", size=" + size());
+        System.out.println("[DEFRAG-END] page=" + id + ", size=" + size() + " usedBytes=" + usedBytes() + ", bodySize=" + bodySize() + ", size=" + size());
     }
 
     private <T> short overflow(T value, Serializer<T> ser) {
@@ -459,7 +482,49 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private void checkDeleted() {
         if(isDeleted()) {
-            throw new IllegalStateException("page is deleted");
+            throw new IllegalStateException("page " + id + " is deleted");
         }
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("[");
+        sb.append("#");
+        sb.append(id());
+        sb.append(" ");
+        if(isDeleted()) {
+            sb.append("*deleted* | ");
+        }
+        sb.append("size: ");
+        sb.append(size());
+        sb.append(" | used: ");
+        sb.append(usedBytes());
+        sb.append(" | body: ");
+        sb.append(bodySize());
+        sb.append(" | ");
+
+        boolean first = true;
+        for (int i = 0; i < size(); i++) {
+            if (first) {
+                first = false;
+            }
+            else {
+                sb.append(", ");
+            }
+
+            sb.append(key(i));
+            sb.append(": ");
+            sb.append(value(i));
+
+            if(!leaf) {
+                sb.append(": ");
+                sb.append(child(i));
+            }
+        }
+
+        sb.append("]");
+        return sb.toString();
     }
 }

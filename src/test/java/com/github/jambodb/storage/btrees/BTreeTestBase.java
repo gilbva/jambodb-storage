@@ -26,36 +26,30 @@ public class BTreeTestBase {
 
         for (var key : tree.keySet()) {
             bTree.remove(key);
-            if(bTree.get(key) != null) {
-                System.out.println(key + " => " + bTree.get(key));
-            }
             Assertions.assertNull(bTree.get(key));
         }
 
-        System.out.println("before sync");
         for (var key : tree.keySet()) {
-            if(bTree.get(key) != null) {
-                System.out.println(key + " => " + bTree.get(key));
-            }
             Assertions.assertNull(bTree.get(key));
         }
+
         pager.fsync();
-
-        System.out.println("after sync");
         for (var key : tree.keySet()) {
-            if(bTree.get(key) != null) {
-                System.out.println(key + " => " + bTree.get(key));
-            }
             Assertions.assertNull(bTree.get(key));
         }
 
         for (var entry : tree.entrySet()) {
             bTree.put(entry.getKey(), entry.getValue());
-            V value = bTree.get(entry.getKey());
-            Assertions.assertEquals(entry.getValue(), value);
+            Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
         }
-        pager.fsync();
 
+        assertQuery(tree, bTree, null, null);
+        for (var query : queries) {
+            var expected = tree.subMap(query[0], true, query[1], true);
+            assertQuery(expected, bTree, query[0], query[1]);
+        }
+
+        pager.fsync();
         assertQuery(tree, bTree, null, null);
         for (var query : queries) {
             var expected = tree.subMap(query[0], true, query[1], true);
