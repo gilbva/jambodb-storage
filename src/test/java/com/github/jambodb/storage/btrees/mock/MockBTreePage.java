@@ -93,11 +93,11 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
         Object tmpKey = keys[i];
         Object tmpValue = values[i];
 
-        keys[j] = keys[i];
-        values[j] = values[i];
+        keys[i] = keys[j];
+        values[i] = values[j];
 
-        keys[i] = tmpKey;
-        values[i] = tmpValue;
+        keys[j] = tmpKey;
+        values[j] = tmpValue;
     }
 
     @Override
