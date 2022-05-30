@@ -9,7 +9,6 @@ import org.junit.jupiter.api.TestFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.logging.Logger;
 
 public class BTreeFilePagerTest extends BTreeTestBase {
     @TestFactory
