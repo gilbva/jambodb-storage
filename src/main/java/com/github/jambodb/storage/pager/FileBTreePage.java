@@ -79,6 +79,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         adPointer((short)BlockStorage.BLOCK_SIZE);
         usedBytes((short)0);
         size(0);
+        modified = true;
     }
 
     @Override
@@ -101,6 +102,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             return;
         }
 
+        modified = true;
         if(prevSize < value) {
             buffer.putShort(SIZE_POS, (short) value);
             if(headerSize() > adPointer()) {
@@ -364,13 +366,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         }
         else {
             buffer.position(position);
-            try {
-                result = ser.read(buffer);
-            }
-            catch (IllegalArgumentException ex) {
-                System.out.println(ex.getMessage() + " position=" + position + " page=" + id);
-                throw ex;
-            }
+            result = ser.read(buffer);
         }
 
         if(result == null) {
@@ -404,7 +400,6 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     private void defragment(int size) {
-        System.out.println("[DEFRAG] page=" + id + ", size=" + size() + " usedBytes=" + usedBytes() + ", bodySize=" + bodySize() + ", size=" + size());
         List<K> keys = new ArrayList<>(size);
         List<V> values = new ArrayList<>(size);
         for(int i = 0; i < size; i++) {
@@ -419,7 +414,6 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
             valuePos(i, appendData(values.get(i), valueSer));
         }
         setFragmented(false);
-        System.out.println("[DEFRAG-END] page=" + id + ", size=" + size() + " usedBytes=" + usedBytes() + ", bodySize=" + bodySize() + ", size=" + size());
     }
 
     private <T> short overflow(T value, Serializer<T> ser) {

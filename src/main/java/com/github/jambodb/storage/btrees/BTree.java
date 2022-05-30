@@ -570,7 +570,7 @@ public final class BTree<K extends Comparable<K>, V> {
      * @throws IOException if any I/O error occurs while removing the root page or setting the new root page in the pager.
      */
     void shrink() throws IOException {
-        var oldRoot = pager.create(false);
+        var oldRoot = pager.page(root);
         if (oldRoot.size() == 0 && !oldRoot.isLeaf()) {
             root = oldRoot.child(0);
             pager.root(root);

@@ -12,13 +12,9 @@ import java.util.*;
 import java.util.logging.Logger;
 
 public class BTreeFilePagerTest extends BTreeTestBase {
-    public static final Logger LOG = Logger.getLogger(BTreeFilePagerTest.class.getName());
-
     @TestFactory
     public Collection<DynamicTest> testBTree() {
         List<DynamicTest> lst = new ArrayList<>();
-        lst.add(DynamicTest.dynamicTest("testing btree size=" + 10000, () -> doTest(10000)));
-        /*
         for (int i = 0; i < 100; i++) {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing btree size=" + size, () -> doTest(size)));
@@ -28,7 +24,6 @@ public class BTreeFilePagerTest extends BTreeTestBase {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing btree size=" + size, () -> doTest(size)));
         }
-        */
 
         return lst;
     }
