@@ -4,6 +4,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Serializer for java.lang.Float.
+ */
 public class FloatSerializer implements Serializer<Float> {
     public static final FloatSerializer INSTANCE = new FloatSerializer();
 

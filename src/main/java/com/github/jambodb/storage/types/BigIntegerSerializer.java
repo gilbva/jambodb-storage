@@ -2,11 +2,12 @@ package com.github.jambodb.storage.types;
 
 import com.github.jambodb.storage.btrees.Serializer;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
+/**
+ * Serializer for java.math.BigInteger.
+ */
 public class BigIntegerSerializer implements Serializer<BigInteger> {
     public static final BigIntegerSerializer INSTANCE = new BigIntegerSerializer();
 

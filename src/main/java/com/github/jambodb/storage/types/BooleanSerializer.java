@@ -4,6 +4,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Serializer for java.lang.Boolean.
+ */
 public class BooleanSerializer implements Serializer<Boolean> {
     public static final BooleanSerializer INSTANCE = new BooleanSerializer();
 

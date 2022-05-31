@@ -4,6 +4,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Serializer for java.lang.Char.
+ */
 public class CharSerializer implements Serializer<Character> {
     public static final CharSerializer INSTANCE = new CharSerializer();
 

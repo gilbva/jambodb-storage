@@ -4,6 +4,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Serializer for java.lang.Byte.
+ */
 public class ByteSerializer implements Serializer<Byte> {
     public static final ByteSerializer INSTANCE = new ByteSerializer();
 

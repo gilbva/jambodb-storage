@@ -4,6 +4,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Serializer for java.lang.Short.
+ */
 public class ShortSerializer implements Serializer<Short> {
     public static final ShortSerializer INSTANCE = new ShortSerializer();
 

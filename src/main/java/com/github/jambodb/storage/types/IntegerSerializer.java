@@ -5,6 +5,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Serializer for java.lang.Integer.
+ */
 public class IntegerSerializer implements Serializer<Integer> {
     public static final IntegerSerializer INSTANCE = new IntegerSerializer();
 

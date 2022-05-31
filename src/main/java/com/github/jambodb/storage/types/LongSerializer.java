@@ -4,6 +4,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Serializer for java.lang.Long.
+ */
 public class LongSerializer implements Serializer<Long> {
     public static final LongSerializer INSTANCE = new LongSerializer();
 

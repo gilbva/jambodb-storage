@@ -4,6 +4,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Serializer for java.lang.Double.
+ */
 public class DoubleSerializer implements Serializer<Double> {
     public static final DoubleSerializer INSTANCE = new DoubleSerializer();
 

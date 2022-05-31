@@ -5,6 +5,9 @@ import com.github.jambodb.storage.btrees.Serializer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Serializer for java.lang.String.
+ */
 public class SmallStringSerializer implements Serializer<String> {
     public static final SmallStringSerializer INSTANCE = new SmallStringSerializer();
 
