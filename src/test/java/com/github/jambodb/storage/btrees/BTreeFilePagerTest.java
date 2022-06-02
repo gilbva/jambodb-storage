@@ -28,10 +28,22 @@ public class BTreeFilePagerTest extends BTreeTestBase {
     }
 
     private void doTest(int size) throws IOException {
-        var tmpFile = Files.createTempFile("test", "jambodb");
-        var strToIntPager = FilePager.create(tmpFile, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
-        var intToStrPager = FilePager.create(tmpFile, IntegerSerializer.INSTANCE, SmallStringSerializer.INSTANCE);
+        var strToIntFile = Files.createTempFile("test", "jambodb");
+        var intToStrFile = Files.createTempFile("test", "jambodb");
 
+        var strToIntPager = FilePager.create(strToIntFile, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        var intToStrPager = FilePager.create(intToStrFile, IntegerSerializer.INSTANCE, SmallStringSerializer.INSTANCE);
+        performTest(size, strToIntPager, intToStrPager);
+
+        removeAll(new BTree<>(strToIntPager));
+        removeAll(new BTree<>(intToStrPager));
+
+        strToIntPager = FilePager.open(strToIntFile, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        intToStrPager = FilePager.open(intToStrFile, IntegerSerializer.INSTANCE, SmallStringSerializer.INSTANCE);
+        performTest(size, strToIntPager, intToStrPager);
+    }
+
+    private void performTest(int size, FilePager<String, Integer> strToIntPager, FilePager<Integer, String> intToStrPager) throws IOException {
         var expectedStiTree = new TreeMap<String, Integer>();
         var expectedItsTree = new TreeMap<Integer, String>();
 

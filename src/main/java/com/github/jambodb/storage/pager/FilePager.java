@@ -16,7 +16,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         return new FilePager<>(file, true, keySer, valueSer);
     }
 
-    public static <K, V> FilePager<K, V> load(Path file, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+    public static <K, V> FilePager<K, V> open(Path file, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
         return new FilePager<>(file, false, keySer, valueSer);
     }
 
