@@ -28,19 +28,28 @@ public class BTreeTestBase {
             bTree.remove(key);
             Assertions.assertNull(bTree.get(key));
         }
-        pager.fsync();
 
+        for (var key : tree.keySet()) {
+            Assertions.assertNull(bTree.get(key));
+        }
+
+        pager.fsync();
         for (var key : tree.keySet()) {
             Assertions.assertNull(bTree.get(key));
         }
 
         for (var entry : tree.entrySet()) {
             bTree.put(entry.getKey(), entry.getValue());
-            V value = bTree.get(entry.getKey());
-            Assertions.assertEquals(entry.getValue(), value);
+            Assertions.assertEquals(entry.getValue(), bTree.get(entry.getKey()));
         }
-        pager.fsync();
 
+        assertQuery(tree, bTree, null, null);
+        for (var query : queries) {
+            var expected = tree.subMap(query[0], true, query[1], true);
+            assertQuery(expected, bTree, query[0], query[1]);
+        }
+
+        pager.fsync();
         assertQuery(tree, bTree, null, null);
         for (var query : queries) {
             var expected = tree.subMap(query[0], true, query[1], true);

@@ -89,6 +89,18 @@ public class MockBTreePage<K, V> implements BTreePage<K, V> {
     }
 
     @Override
+    public void swap(int i, int j) {
+        Object tmpKey = keys[i];
+        Object tmpValue = values[i];
+
+        keys[i] = keys[j];
+        values[i] = values[j];
+
+        keys[j] = tmpKey;
+        values[j] = tmpValue;
+    }
+
+    @Override
     public void value(int index, V value) {
         values[index] = value;
     }

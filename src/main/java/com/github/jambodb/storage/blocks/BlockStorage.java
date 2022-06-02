@@ -3,6 +3,11 @@ package com.github.jambodb.storage.blocks;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 /**
  * This class represents a block storage, block is defined as a collections of bytes that are
@@ -14,36 +19,64 @@ import java.nio.ByteBuffer;
  *
  */
 public interface BlockStorage extends Closeable {
-    /**
-     * Gets the size in bytes of the blocks handled by this storage.
-     * (All blocks in this storage are of the same size.)
-     *
-     * @return An integer that represents the size in bytes of the blocks handled by this storage.
-     */
-    int blockSize();
+
+    int BLOCK_SIZE = 4096;
+
+    static BlockStorage open(Path path) throws IOException {
+        OpenOption[] options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
+        SeekableByteChannel channel = Files.newByteChannel(path, options);
+        return new JamboBlksV1(channel, false);
+    }
+
+    static BlockStorage create(Path path) throws IOException {
+        OpenOption[] options;
+        if (Files.exists(path)) {
+            options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
+        } else {
+            options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE};
+        }
+        SeekableByteChannel channel = Files.newByteChannel(path, options);
+        return new JamboBlksV1(channel, true);
+
+    }
 
     /**
      * Gets the amount of blocks that have been created in this storage.
      *
      * @return An integer that represents the count of blocks present in this storage.
      */
-    int blockCount();
+    int count();
 
     /**
      * Sets the amount of blocks that will be created in this storage.
      *
      * @param count An integer that represents the count of blocks that will be present in this storage.
      */
-    void blockCount(int count) throws IOException;
+    void count(int count) throws IOException;
 
     /**
-     * This method creates a new block by expanding the count of blocks
-     * currently manage by this object.
+     * This expands the count of blocks currently manage by this object.
      *
      * @return The index of the new block created.
      * @throws IOException if any I/O exceptions occur writing to the underlying storage.
      */
-    int createBlock() throws IOException;
+    int increase() throws IOException;
+
+    /**
+     * Reads the data space of the header of the storage.
+     *
+     * @param data the buffer to read into.
+     * @throws IOException if any I/O exception occurs.
+     */
+    void readHead(ByteBuffer data) throws IOException;
+
+    /**
+     * Writes the data space of the header of the storage.
+     *
+     * @param data the buffer to write to.
+     * @throws IOException if any I/O exception occurs.
+     */
+    void writeHead(ByteBuffer data) throws IOException;
 
     /**
      * This method reads the block at the given index, into the provided data buffer.
