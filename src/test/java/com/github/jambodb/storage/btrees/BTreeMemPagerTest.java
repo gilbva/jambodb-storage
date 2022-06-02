@@ -3,13 +3,10 @@ package com.github.jambodb.storage.btrees;
 import com.github.jambodb.storage.btrees.mock.MockPager;
 import java.io.IOException;
 import java.util.*;
-import java.util.logging.Logger;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 public class BTreeMemPagerTest extends BTreeTestBase {
-    public static final Logger LOG = Logger.getLogger(BTreeMemPagerTest.class.getName());
-
     @TestFactory
     public Collection<DynamicTest> testBTree() {
         List<DynamicTest> lst = new ArrayList<>();
