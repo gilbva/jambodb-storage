@@ -1,6 +1,7 @@
 package com.github.jambodb.storage.blocks;
 
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
@@ -10,6 +11,9 @@ import java.util.Arrays;
 
 import static com.github.jambodb.storage.blocks.BlockStorage.BLOCK_SIZE;
 
+/**
+ * Header wrapper for JamboBlksV1
+ */
 class HeaderBlksV1 {
     private static final byte[] TITLE = "JamboBlks".getBytes(StandardCharsets.UTF_8);
 
@@ -23,6 +27,11 @@ class HeaderBlksV1 {
 
     private final ByteBuffer content;
 
+    /**
+     * Creates an empty header that can be fill with the actual data from a file.
+     *
+     * @throws IOException
+     */
     public HeaderBlksV1() throws IOException {
         content = ByteBuffer.allocate(BLOCK_SIZE);
         try {
@@ -33,43 +42,82 @@ class HeaderBlksV1 {
         }
     }
 
+    /**
+     * Gets and verify the title of the file.
+     *
+     * @return the title must be 'JamboBlks'
+     */
     public String title() {
         return verifyAndReturn(0, TITLE);
     }
 
+    /**
+     * Gets and verify the version of the file.
+     *
+     * @return the version must be 'v1'
+     */
     public String version() {
         return verifyAndReturn(TITLE.length, VERSION);
     }
 
+    /**
+     * Initializes this header by adding title and version.
+     */
     public void init() {
         content.position(0);
         content.put(TITLE);
         content.put(VERSION);
     }
 
+    /**
+     * Gets the count of blocks saved in the header.
+     *
+     * @return the number of blocks saved.
+     */
     public int count() {
         return content.getInt(BLOCK_COUNT_POS);
     }
 
+    /**
+     * Writes the number of blocks for the storage in this header.
+     *
+     * @param value the number of blocks.
+     */
     public void count(int value) {
         content.putInt(BLOCK_COUNT_POS, value);
     }
 
+    /**
+     * Reads the header from the given buffer.
+     *
+     * @param data the buffer containen the data for the header.
+     */
     public void read(ByteBuffer data) {
         int size = BLOCK_SIZE - DATA_POS - digest.getDigestLength();
         data.put(content.array(), DATA_POS, Math.min(size, data.remaining()));
         data.flip();
     }
 
+    /**
+     * Writes the header to the given buffer.
+     *
+     * @param data the buffer to write to.
+     * @throws IOException if the buffer provided does not have enough space
+     */
     public void write(ByteBuffer data) throws IOException {
         int size = BLOCK_SIZE - DATA_POS - digest.getDigestLength();
         if (data.remaining() > size) {
-            throw new IOException("header data overflow");
+            throw new BufferOverflowException();
         }
         content.position(DATA_POS);
         content.put(data.array());
     }
 
+    /**
+     * Calculates the checksum of the header.
+     *
+     * @return the checksum for all the bytes in the header.
+     */
     public byte[] calcChecksum() {
         byte[] dataBytes = new byte[BLOCK_SIZE - digest.getDigestLength() - BLOCK_COUNT_POS];
         content.position(BLOCK_COUNT_POS);
@@ -77,6 +125,11 @@ class HeaderBlksV1 {
         return digest.digest(dataBytes);
     }
 
+    /**
+     * Gets the checksum stored in the header
+     *
+     * @return the previously calculated checksum for this header
+     */
     public byte[] checksum() {
         int checksumPos = BLOCK_SIZE - digest.getDigestLength();
         byte[] data = new byte[digest.getDigestLength()];
@@ -85,6 +138,11 @@ class HeaderBlksV1 {
         return data;
     }
 
+    /**
+     * Stores a checksum of the data of the header
+     *
+     * @param value the calculated checksum to store
+     */
     public void checksum(byte[] value) {
         if(value.length != digest.getDigestLength()) {
             throw new IllegalArgumentException("invalid checksum");
@@ -94,6 +152,12 @@ class HeaderBlksV1 {
         content.put(value);
     }
 
+    /**
+     * Writes the content of the header to the given channel
+     *
+     * @param channel the channel to write the header to.
+     * @throws IOException if any I/O exception occurs.
+     */
     public void write(SeekableByteChannel channel) throws IOException {
         checksum(calcChecksum());
         channel.position(0);
@@ -106,6 +170,12 @@ class HeaderBlksV1 {
         }
     }
 
+    /**
+     * Reads the content of the header from the given channel.
+     *
+     * @param channel the channel to read the data from.
+     * @throws IOException if any I/O exception occurs.
+     */
     public void read(SeekableByteChannel channel) throws IOException {
         channel.position(0);
         content.position(0);
@@ -132,6 +202,14 @@ class HeaderBlksV1 {
         }
     }
 
+    /**
+     * Verifies if the given bytes correspond to the bytes
+     * at the given position in the internal buffer
+     *
+     * @param position the position to read the bytes from.
+     * @param tmpl the bytes to match with those read from the internal buffer
+     * @return null if the bytes do not match, or the string if they do
+     */
     private String verifyAndReturn(int position, byte[] tmpl) {
         byte[] data = new byte[tmpl.length];
         content.position(position);

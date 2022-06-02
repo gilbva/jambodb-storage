@@ -63,16 +63,18 @@ public interface BlockStorage extends Closeable {
     int increase() throws IOException;
 
     /**
+     * Reads the data space of the header of the storage.
      *
-     * @param data
-     * @throws IOException
+     * @param data the buffer to read into.
+     * @throws IOException if any I/O exception occurs.
      */
     void readHead(ByteBuffer data) throws IOException;
 
     /**
+     * Writes the data space of the header of the storage.
      *
-     * @param data
-     * @throws IOException
+     * @param data the buffer to write to.
+     * @throws IOException if any I/O exception occurs.
      */
     void writeHead(ByteBuffer data) throws IOException;
 

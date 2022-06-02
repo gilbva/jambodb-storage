@@ -47,12 +47,12 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     }
 
     @Override
-    public int root() throws IOException {
+    public int root() {
         return root;
     }
 
     @Override
-    public void root(int id) throws IOException {
+    public void root(int id) {
         root = id;
     }
 

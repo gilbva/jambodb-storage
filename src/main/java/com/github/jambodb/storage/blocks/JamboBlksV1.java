@@ -8,12 +8,22 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
+/**
+ * File format JamboBlks version 1, implements the BlockStorage interface.
+ */
 class JamboBlksV1 implements BlockStorage {
 
     private final SeekableByteChannel channel;
     private final HeaderBlksV1 header;
     private int count;
 
+    /**
+     * This constructor accepts the underlying file channel and if it needs to be initialized
+     *
+     * @param fileChannel the channel to the file
+     * @param init if the file needs to be initialized.
+     * @throws IOException if any I/O exception occurs
+     */
     JamboBlksV1(SeekableByteChannel fileChannel, boolean init) throws IOException {
         channel = fileChannel;
 
@@ -48,7 +58,7 @@ class JamboBlksV1 implements BlockStorage {
     }
 
     @Override
-    public void readHead(ByteBuffer data) throws IOException {
+    public void readHead(ByteBuffer data) {
         header.read(data);
     }
 
@@ -87,6 +97,12 @@ class JamboBlksV1 implements BlockStorage {
         channel.close();
     }
 
+    /**
+     * Finds the position of the block given its index.
+     *
+     * @param index the zero-based index of the block.
+     * @return the position of the block inside the file.
+     */
     private long findPosition(int index) {
         return BLOCK_SIZE + ((long) index * BLOCK_SIZE);
     }
