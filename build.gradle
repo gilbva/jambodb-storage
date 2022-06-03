@@ -2,7 +2,7 @@ plugins {
     id 'java'
 }
 
-group 'com.github.jambodb'
+group 'me.gilbva.jambodb'
 version '0.1-SNAPSHOT'
 
 repositories {
