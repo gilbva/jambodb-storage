@@ -88,7 +88,7 @@ public class BTreeTestBase {
     }
 
     protected <K extends Comparable<K>, V> boolean isEmpty(BTree<K, V> btree) throws IOException {
-       return btree.query(null, null).hasNext();
+       return !btree.query(null, null).hasNext();
     }
 
     protected <T extends BTreeEntry<?, ?>> List<T> toList(Iterator<T> query) {
