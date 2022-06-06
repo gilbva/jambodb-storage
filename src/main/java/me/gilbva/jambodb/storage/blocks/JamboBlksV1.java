@@ -92,7 +92,7 @@ class JamboBlksV1 implements BlockStorage {
         channel.close();
     }
 
-    /**
+    /**K
      * Finds the position of the block given its index.
      *
      * @param index the zero-based index of the block.
