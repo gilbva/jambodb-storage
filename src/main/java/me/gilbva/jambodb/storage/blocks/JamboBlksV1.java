@@ -40,7 +40,6 @@ class JamboBlksV1 implements BlockStorage {
         return count;
     }
 
-    @Override
     public void count(int count) throws IOException {
         this.count = count;
         header.count(count);

@@ -62,7 +62,7 @@ public class FileBTreePageTest {
         }
 
         storage = BlockStorage.open(tmpFile);
-        page = FileBTreePage.load(storage, page.id(), SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        page = FileBTreePage.open(storage, page.id(), SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
         Assertions.assertFalse(page.isModified());
 
         Assertions.assertEquals(lst.size(), page.size());

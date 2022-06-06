@@ -48,13 +48,6 @@ public interface BlockStorage extends Closeable {
     int count();
 
     /**
-     * Sets the amount of blocks that will be created in this storage.
-     *
-     * @param count An integer that represents the count of blocks that will be present in this storage.
-     */
-    void count(int count) throws IOException;
-
-    /**
      * This expands the count of blocks currently manage by this object.
      *
      * @return The index of the new block created.

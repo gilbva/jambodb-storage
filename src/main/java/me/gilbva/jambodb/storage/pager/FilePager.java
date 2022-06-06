@@ -65,7 +65,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
             return pagesCache.get(id);
         }
 
-        var page = FileBTreePage.load(storage, id, keySer, valueSer);
+        var page = FileBTreePage.open(storage, id, keySer, valueSer);
         pagesCache.put(id, page);
         return page;
     }
