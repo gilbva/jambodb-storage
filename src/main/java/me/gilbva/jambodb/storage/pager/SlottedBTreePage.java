@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class FileBTreePage<K, V> implements BTreePage<K, V> {
+public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
     private static final short FLAG_IS_LEAF = 1;
 
     private static final short FLAG_IS_DELETED = 2;
@@ -26,12 +26,12 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private static final int ELEMENTS_POS = 8;
 
-    public static <K, V> FileBTreePage<K, V> create(BlockStorage storage, boolean isLeaf, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        return new FileBTreePage<>(storage, isLeaf, keySer, valueSer);
+    public static <K, V> SlottedBTreePage<K, V> create(BlockStorage storage, boolean isLeaf, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+        return new SlottedBTreePage<>(storage, isLeaf, keySer, valueSer);
     }
 
-    public static <K, V> FileBTreePage<K, V> open(BlockStorage storage, int id, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        return new FileBTreePage<>(storage, id, keySer, valueSer);
+    public static <K, V> SlottedBTreePage<K, V> open(BlockStorage storage, int id, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+        return new SlottedBTreePage<>(storage, id, keySer, valueSer);
     }
 
     private final int id;
@@ -58,7 +58,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
 
     private Map<Short, ByteBuffer> overflowMap;
 
-    private FileBTreePage(BlockStorage storage, int id, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+    private SlottedBTreePage(BlockStorage storage, int id, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
         this.id = id;
         this.storage = storage;
         this.keySer = keySer;
@@ -76,7 +76,7 @@ public class FileBTreePage<K, V> implements BTreePage<K, V> {
         usedBytes = buffer.getShort(USED_BYTES_POS);
     }
 
-    private FileBTreePage(BlockStorage storage, boolean isLeaf, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+    private SlottedBTreePage(BlockStorage storage, boolean isLeaf, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
         this.storage = storage;
         this.keySer = keySer;
         this.valueSer = valueSer;

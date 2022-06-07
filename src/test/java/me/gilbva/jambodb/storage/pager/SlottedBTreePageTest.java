@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class FileBTreePageTest {
+public class SlottedBTreePageTest {
 
     @TestFactory
     public List<DynamicTest> testAll() {
@@ -29,7 +29,7 @@ public class FileBTreePageTest {
     public void testPage(boolean leaf) throws IOException {
         var tmpFile = Files.createTempFile("test", "jambodb");
         var storage = BlockStorage.create(tmpFile);
-        var page = FileBTreePage.create(storage, leaf, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        var page = SlottedBTreePage.create(storage, leaf, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
         List<String> lst = new ArrayList<>();
         short usedBytes = 0;
         for (int i = 0; !page.isFull(); i++) {
@@ -62,7 +62,7 @@ public class FileBTreePageTest {
         }
 
         storage = BlockStorage.open(tmpFile);
-        page = FileBTreePage.open(storage, page.id(), SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        page = SlottedBTreePage.open(storage, page.id(), SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
         Assertions.assertFalse(page.isModified());
 
         Assertions.assertEquals(lst.size(), page.size());

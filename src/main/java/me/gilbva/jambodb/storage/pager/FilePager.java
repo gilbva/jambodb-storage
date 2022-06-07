@@ -20,7 +20,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         return new FilePager<>(file, false, keySer, valueSer);
     }
 
-    private final Map<Integer, FileBTreePage<K, V>> pagesCache;
+    private final Map<Integer, SlottedBTreePage<K, V>> pagesCache;
 
     private final BlockStorage storage;
 
@@ -57,7 +57,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     }
 
     @Override
-    public FileBTreePage<K, V> page(int id) throws IOException {
+    public SlottedBTreePage<K, V> page(int id) throws IOException {
         if(id == 0) {
             throw new IllegalArgumentException("invalid id " + id);
         }
@@ -65,14 +65,14 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
             return pagesCache.get(id);
         }
 
-        var page = FileBTreePage.open(storage, id, keySer, valueSer);
+        var page = SlottedBTreePage.open(storage, id, keySer, valueSer);
         pagesCache.put(id, page);
         return page;
     }
 
     @Override
-    public FileBTreePage<K, V> create(boolean leaf) throws IOException {
-        var page = FileBTreePage.create(storage, leaf, keySer, valueSer);
+    public SlottedBTreePage<K, V> create(boolean leaf) throws IOException {
+        var page = SlottedBTreePage.create(storage, leaf, keySer, valueSer);
         pagesCache.put(page.id(), page);
         return page;
     }
