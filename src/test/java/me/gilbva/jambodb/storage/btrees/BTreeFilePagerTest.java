@@ -18,17 +18,14 @@ public class BTreeFilePagerTest extends BTreeTestBase {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 0", () -> doTest(size, 0)));
             lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 1", () -> doTest(size, 1)));
-            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10", () -> doTest(size, 10)));
-            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10_000", () -> doTest(size, 10_000)));
+            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10_000", () -> doTest(size, 1000)));
         }
 
         for (int i = 10_000; i < 100_000; i += 10_000) {
             final int size = i;
             lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10", () -> doTest(size, 10)));
-            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10_000", () -> doTest(size, 10_000)));
             lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 100_000", () -> doTest(size, 100_000)));
         }
-
         return lst;
     }
 
