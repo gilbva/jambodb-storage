@@ -32,6 +32,9 @@ public class BTreeTestBase {
         for (var key : tree.keySet()) {
             Assertions.assertTrue(bTree.exists(key));
             bTree.remove(key);
+            if(bTree.exists(key)) {
+                System.out.println(key);
+            }
             Assertions.assertFalse(bTree.exists(key));
             Assertions.assertNull(bTree.get(key));
         }

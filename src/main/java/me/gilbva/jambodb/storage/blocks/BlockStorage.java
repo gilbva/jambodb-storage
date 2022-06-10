@@ -37,7 +37,6 @@ public interface BlockStorage extends Closeable {
         }
         SeekableByteChannel channel = Files.newByteChannel(path, options);
         return new JamboBlksV1(channel, true);
-
     }
 
     /**

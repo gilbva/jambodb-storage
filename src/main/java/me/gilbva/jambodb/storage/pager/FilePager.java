@@ -12,15 +12,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
-    public static <K, V> FilePager<K, V> create(Path file, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        return new FilePager<>(file, true, keySer, valueSer);
+    public static <K, V> FilePager<K, V> create(Path file, int cachePages, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+        return new FilePager<>(file, cachePages, true, keySer, valueSer);
     }
 
-    public static <K, V> FilePager<K, V> open(Path file, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        return new FilePager<>(file, false, keySer, valueSer);
+    public static <K, V> FilePager<K, V> open(Path file, int cachePages, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+        return new FilePager<>(file, cachePages, false, keySer, valueSer);
     }
 
-    private final Map<Integer, SlottedBTreePage<K, V>> pagesCache;
+    private final LRUPagesCache<K, V> cache;
+
+    private final Map<Integer, SlottedBTreePage<K, V>> txPages;
 
     private final BlockStorage storage;
 
@@ -30,10 +32,11 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     private final Serializer<V> valueSer;
 
-    private FilePager(Path file, boolean init, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+    private FilePager(Path file, int cachePages, boolean init, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
         this.keySer = keySer;
         this.valueSer = valueSer;
-        this.pagesCache = new HashMap<>();
+        this.cache = new LRUPagesCache<>(cachePages);
+        this.txPages = new HashMap<>();
 
         if(init) {
             storage = BlockStorage.create(file);
@@ -61,19 +64,22 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         if(id == 0) {
             throw new IllegalArgumentException("invalid id " + id);
         }
-        if(pagesCache.containsKey(id)) {
-            return pagesCache.get(id);
+        if(txPages.containsKey(id)) {
+            return txPages.get(id);
+        }
+        if(cache.contains(id)) {
+            return cache.get(id);
         }
 
-        var page = SlottedBTreePage.open(storage, id, keySer, valueSer);
-        pagesCache.put(id, page);
+        var page = SlottedBTreePage.open(this, id);
+        cache.put(page);
         return page;
     }
 
     @Override
     public SlottedBTreePage<K, V> create(boolean leaf) throws IOException {
-        var page = SlottedBTreePage.create(storage, leaf, keySer, valueSer);
-        pagesCache.put(page.id(), page);
+        var page = SlottedBTreePage.create(this, leaf);
+        txPages.put(page.id(), page);
         return page;
     }
 
@@ -88,12 +94,13 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     @Override
     public void fsync() throws IOException {
         writeRoot();
-        for (var page : pagesCache.values()) {
+        for (var page : txPages.values()) {
             if(page.isModified()) {
                 page.save();
+                cache.put(page);
             }
         }
-        pagesCache.clear();
+        txPages.clear();
     }
 
     public void writeRoot() throws IOException {
@@ -106,5 +113,24 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         ByteBuffer buffer = ByteBuffer.allocate(4);
         storage.readHead(buffer);
         return buffer.getInt();
+    }
+
+    public Serializer<K> getKeySer() {
+        return keySer;
+    }
+
+    public Serializer<V> getValueSer() {
+        return valueSer;
+    }
+
+    public BlockStorage getStorage() {
+        return storage;
+    }
+
+    void pageModified(SlottedBTreePage<K, V> page) {
+        if(page.isModified()) {
+            cache.remove(page);
+            txPages.put(page.id(), page);
+        }
     }
 }

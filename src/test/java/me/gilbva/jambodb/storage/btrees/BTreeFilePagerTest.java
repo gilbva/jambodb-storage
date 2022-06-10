@@ -16,30 +16,35 @@ public class BTreeFilePagerTest extends BTreeTestBase {
         List<DynamicTest> lst = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             final int size = i;
-            lst.add(DynamicTest.dynamicTest("testing btree size=" + size, () -> doTest(size)));
+            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 0", () -> doTest(size, 0)));
+            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 1", () -> doTest(size, 1)));
+            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10", () -> doTest(size, 10)));
+            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10_000", () -> doTest(size, 10_000)));
         }
 
-        for (int i = 10000; i < 100000; i += 10000) {
+        for (int i = 10_000; i < 100_000; i += 10_000) {
             final int size = i;
-            lst.add(DynamicTest.dynamicTest("testing btree size=" + size, () -> doTest(size)));
+            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10", () -> doTest(size, 10)));
+            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 10_000", () -> doTest(size, 10_000)));
+            lst.add(DynamicTest.dynamicTest("testing btree size=" + size + " cache: 100_000", () -> doTest(size, 100_000)));
         }
 
         return lst;
     }
 
-    private void doTest(int size) throws IOException {
+    private void doTest(int size, int cachePages) throws IOException {
         var strToIntFile = Files.createTempFile("test", "jambodb");
         var intToStrFile = Files.createTempFile("test", "jambodb");
 
-        var strToIntPager = FilePager.create(strToIntFile, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
-        var intToStrPager = FilePager.create(intToStrFile, IntegerSerializer.INSTANCE, SmallStringSerializer.INSTANCE);
+        var strToIntPager = FilePager.create(strToIntFile, cachePages, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        var intToStrPager = FilePager.create(intToStrFile, cachePages, IntegerSerializer.INSTANCE, SmallStringSerializer.INSTANCE);
         performTest(size, strToIntPager, intToStrPager);
 
         removeAll(new BTree<>(strToIntPager));
         removeAll(new BTree<>(intToStrPager));
 
-        strToIntPager = FilePager.open(strToIntFile, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
-        intToStrPager = FilePager.open(intToStrFile, IntegerSerializer.INSTANCE, SmallStringSerializer.INSTANCE);
+        strToIntPager = FilePager.open(strToIntFile, cachePages, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        intToStrPager = FilePager.open(intToStrFile, cachePages, IntegerSerializer.INSTANCE, SmallStringSerializer.INSTANCE);
         performTest(size, strToIntPager, intToStrPager);
     }
 

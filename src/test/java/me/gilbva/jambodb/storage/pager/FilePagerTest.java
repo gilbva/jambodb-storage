@@ -11,7 +11,7 @@ public class FilePagerTest {
     @Test
     public void testPager() throws IOException {
         var tmpFile = Files.createTempFile("test", "jambodb");
-        var pager = FilePager.create(tmpFile, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        var pager = FilePager.create(tmpFile, 10, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
 
         Assertions.assertEquals(1, pager.root());
         Assertions.assertNotNull(pager.page(pager.root()));

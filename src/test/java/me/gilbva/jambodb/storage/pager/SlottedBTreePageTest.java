@@ -28,8 +28,8 @@ public class SlottedBTreePageTest {
 
     public void testPage(boolean leaf) throws IOException {
         var tmpFile = Files.createTempFile("test", "jambodb");
-        var storage = BlockStorage.create(tmpFile);
-        var page = SlottedBTreePage.create(storage, leaf, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        var pager = FilePager.create(tmpFile, 10, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        var page = SlottedBTreePage.create(pager, leaf);
         List<String> lst = new ArrayList<>();
         short usedBytes = 0;
         for (int i = 0; !page.isFull(); i++) {
@@ -61,8 +61,8 @@ public class SlottedBTreePageTest {
             }
         }
 
-        storage = BlockStorage.open(tmpFile);
-        page = SlottedBTreePage.open(storage, page.id(), SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        pager = FilePager.open(tmpFile, 10, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        page = SlottedBTreePage.open(pager, page.id());
         Assertions.assertFalse(page.isModified());
 
         Assertions.assertEquals(lst.size(), page.size());

@@ -26,12 +26,12 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
 
     private static final int ELEMENTS_POS = 8;
 
-    public static <K, V> SlottedBTreePage<K, V> create(BlockStorage storage, boolean isLeaf, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        return new SlottedBTreePage<>(storage, isLeaf, keySer, valueSer);
+    public static <K, V> SlottedBTreePage<K, V> create(FilePager<K, V> pager, boolean isLeaf) throws IOException {
+        return new SlottedBTreePage<>(pager, isLeaf);
     }
 
-    public static <K, V> SlottedBTreePage<K, V> open(BlockStorage storage, int id, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        return new SlottedBTreePage<>(storage, id, keySer, valueSer);
+    public static <K, V> SlottedBTreePage<K, V> open(FilePager<K, V> pager, int id) throws IOException {
+        return new SlottedBTreePage<>(pager, id);
     }
 
     private final int id;
@@ -43,6 +43,8 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
     private final Serializer<K> keySer;
 
     private final Serializer<V> valueSer;
+
+    private final FilePager<K, V> pager;
 
     private final boolean leaf;
 
@@ -58,11 +60,12 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
 
     private Map<Short, ByteBuffer> overflowMap;
 
-    private SlottedBTreePage(BlockStorage storage, int id, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
+    private SlottedBTreePage(FilePager<K, V> pager, int id) throws IOException {
         this.id = id;
-        this.storage = storage;
-        this.keySer = keySer;
-        this.valueSer = valueSer;
+        this.storage = pager.getStorage();
+        this.pager = pager;
+        this.keySer = pager.getKeySer();
+        this.valueSer = pager.getValueSer();
 
         this.buffer = ByteBuffer.allocate(BlockStorage.BLOCK_SIZE);
         this.storage.read(id-1, this.buffer);
@@ -76,10 +79,11 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
         usedBytes = buffer.getShort(USED_BYTES_POS);
     }
 
-    private SlottedBTreePage(BlockStorage storage, boolean isLeaf, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        this.storage = storage;
-        this.keySer = keySer;
-        this.valueSer = valueSer;
+    private SlottedBTreePage(FilePager<K, V> pager, boolean isLeaf) throws IOException {
+        this.storage = pager.getStorage();
+        this.pager = pager;
+        this.keySer = pager.getKeySer();
+        this.valueSer = pager.getValueSer();
 
         this.id = storage.increase()+1;
         this.buffer = ByteBuffer.allocate(BlockStorage.BLOCK_SIZE);
@@ -111,7 +115,7 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
             return;
         }
 
-        modified = true;
+        setModified(true);
         if(prevSize < value) {
             size = value;
             if(headerSize() > adPointer) {
@@ -153,22 +157,26 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
         return modified;
     }
 
+    public void setModified(boolean value) {
+        if(modified != value) {
+            modified = value;
+            pager.pageModified(this);
+        }
+    }
+
     public boolean isDeleted() {
         return deleted;
     }
 
-    public void setDeleted(boolean deleted) {
+    public void setDeleted(boolean value) {
+        deleted = value;
         if(deleted) {
             size = 0;
             adPointer = (short)BlockStorage.BLOCK_SIZE;
             usedBytes = (short)0;
             overflowMap = null;
-            this.deleted = true;
         }
-        else {
-            this.deleted = false;
-        }
-        modified = true;
+        setModified(true);
     }
 
     public void save() throws IOException {
@@ -186,7 +194,7 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
         buffer.putShort(USED_BYTES_POS, (short)usedBytes);
         buffer.position(0);
         storage.write(id-1, buffer);
-        modified = false;
+        setModified(false);
     }
 
     public int usedBytes() {
@@ -240,7 +248,7 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
 
         removeData(keyPos(index), keySer);
         keyPos(index, appendData(data, keySer));
-        modified = true;
+        setModified(true);
     }
 
     @Override
@@ -263,7 +271,7 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
         int pos = valuePos(index);
         removeData(pos, valueSer);
         valuePos(index, appendData(data, valueSer));
-        modified = true;
+        setModified(true);
     }
 
     @Override
@@ -277,6 +285,7 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
 
         keyPos(j, key);
         valuePos(j, value);
+        setModified(true);
     }
 
     @Override
@@ -303,7 +312,7 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
         }
 
         buffer.putInt(elementPos(index), id);
-        modified = true;
+        setModified(true);
     }
 
     private short keyPos(int index) {
@@ -501,6 +510,11 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
                 sb.append(": ");
                 sb.append(child(i));
             }
+        }
+
+        if(!leaf) {
+            sb.append(": ");
+            sb.append(child(size));
         }
 
         sb.append("]");
