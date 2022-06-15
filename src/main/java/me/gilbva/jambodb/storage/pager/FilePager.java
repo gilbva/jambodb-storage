@@ -20,6 +20,14 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         return new FilePager<>(file, cachePages, false, keySer, valueSer);
     }
 
+    public static <K, V> FilePager<K, V> create(Path file, int cachePages, Serializer<K> keySer, Serializer<V> valueSer, String password) throws IOException {
+        return new FilePager<>(file, cachePages, true, keySer, valueSer, password);
+    }
+
+    public static <K, V> FilePager<K, V> open(Path file, int cachePages, Serializer<K> keySer, Serializer<V> valueSer, String password) throws IOException {
+        return new FilePager<>(file, cachePages, false, keySer, valueSer, password);
+    }
+
     private final LRUPagesCache<K, V> cache;
 
     private final Map<Integer, SlottedBTreePage<K, V>> txPages;
@@ -45,6 +53,23 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         }
         else {
             storage = BlockStorage.open(file);
+            root = readRoot();
+        }
+    }
+
+    private FilePager(Path file, int cachePages, boolean init, Serializer<K> keySer, Serializer<V> valueSer, String password) throws IOException {
+        this.keySer = keySer;
+        this.valueSer = valueSer;
+        this.cache = new LRUPagesCache<>(cachePages);
+        this.txPages = new HashMap<>();
+
+        if(init) {
+            storage = BlockStorage.create(file, password);
+            root = create(true).id();
+            writeRoot();
+        }
+        else {
+            storage = BlockStorage.open(file, password);
             root = readRoot();
         }
     }
