@@ -7,25 +7,16 @@ import me.gilbva.jambodb.storage.btrees.Serializer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
 public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
-    public static <K, V> FilePager<K, V> create(Path file, int cachePages, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        return new FilePager<>(file, cachePages, true, keySer, valueSer);
+    public static <K, V> FilePagerBuilder<K, V> create(Serializer<K> keySer, Serializer<V> valueSer) {
+        return new FilePagerOptions<>(true, keySer, valueSer);
     }
 
-    public static <K, V> FilePager<K, V> open(Path file, int cachePages, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        return new FilePager<>(file, cachePages, false, keySer, valueSer);
-    }
-
-    public static <K, V> FilePager<K, V> create(Path file, int cachePages, Serializer<K> keySer, Serializer<V> valueSer, String password) throws IOException {
-        return new FilePager<>(file, cachePages, true, keySer, valueSer, password);
-    }
-
-    public static <K, V> FilePager<K, V> open(Path file, int cachePages, Serializer<K> keySer, Serializer<V> valueSer, String password) throws IOException {
-        return new FilePager<>(file, cachePages, false, keySer, valueSer, password);
+    public static <K, V> FilePagerBuilder<K, V> open(Serializer<K> keySer, Serializer<V> valueSer) {
+        return new FilePagerOptions<>(false, keySer, valueSer);
     }
 
     private final LRUPagesCache<K, V> cache;
@@ -40,36 +31,19 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     private final Serializer<V> valueSer;
 
-    private FilePager(Path file, int cachePages, boolean init, Serializer<K> keySer, Serializer<V> valueSer) throws IOException {
-        this.keySer = keySer;
-        this.valueSer = valueSer;
-        this.cache = new LRUPagesCache<>(cachePages);
+    FilePager(FilePagerOptions<K, V> opts) throws IOException {
+        this.keySer = opts.keySerializer();
+        this.valueSer = opts.valueSerializer();
+        this.cache = new LRUPagesCache<>(opts.cachePages());
         this.txPages = new HashMap<>();
 
-        if(init) {
-            storage = BlockStorage.create(file);
+        if(opts.init()) {
+            storage = BlockStorage.create(opts.file(), opts.security());
             root = create(true).id();
             writeRoot();
         }
         else {
-            storage = BlockStorage.open(file);
-            root = readRoot();
-        }
-    }
-
-    private FilePager(Path file, int cachePages, boolean init, Serializer<K> keySer, Serializer<V> valueSer, String password) throws IOException {
-        this.keySer = keySer;
-        this.valueSer = valueSer;
-        this.cache = new LRUPagesCache<>(cachePages);
-        this.txPages = new HashMap<>();
-
-        if(init) {
-            storage = BlockStorage.create(file, password);
-            root = create(true).id();
-            writeRoot();
-        }
-        else {
-            storage = BlockStorage.open(file, password);
+            storage = BlockStorage.open(opts.file(), opts.security());
             root = readRoot();
         }
     }

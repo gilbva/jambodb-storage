@@ -4,10 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -23,13 +19,14 @@ public class FileBlockStorageTest {
 
     @Test
     public void testFileBlockStorage() throws IOException {
-        testFileBlockStorage(UUID.randomUUID().toString());
+        SecurityOptions options = new SecurityOptions(UUID.randomUUID().toString(), "asd");
+        testFileBlockStorage(options);
         testFileBlockStorage(null);
     }
 
-    public void testFileBlockStorage(String password) throws IOException {
+    public void testFileBlockStorage(SecurityOptions opts) throws IOException {
         var raf = createFile();
-        try(var storage = BlockStorage.create(raf, password)) {
+        try(var storage = BlockStorage.create(raf, opts)) {
             Assertions.assertThrows(Exception.class, () -> storage.read(0, ByteBuffer.allocate(storage.BLOCK_SIZE)));
             Assertions.assertThrows(Exception.class, () -> storage.write(0, ByteBuffer.allocate(storage.BLOCK_SIZE)));
             List<ByteBuffer> buffers = new ArrayList<>();
@@ -43,7 +40,7 @@ public class FileBlockStorageTest {
                 Assertions.assertArrayEquals(toWrite.array(), toRead.array());
             }
 
-            try (var readStorage = BlockStorage.open(raf, password)) {
+            try (var readStorage = BlockStorage.open(raf, opts)) {
                 Assertions.assertEquals(storage.count(), readStorage.count());
                 for (int i = 0; i < 100; i++) {
                     var toRead = ByteBuffer.allocate(readStorage.BLOCK_SIZE);
@@ -56,13 +53,14 @@ public class FileBlockStorageTest {
 
     @Test
     public void testFileBlockStorageWithIntValues() throws IOException {
+        SecurityOptions options = new SecurityOptions(UUID.randomUUID().toString(), "asd");
         testFileBlockStorageWithIntValues(null);
-        testFileBlockStorageWithIntValues("asd");
+        testFileBlockStorageWithIntValues(options);
     }
 
-    public void testFileBlockStorageWithIntValues(String password) throws IOException {
+    public void testFileBlockStorageWithIntValues(SecurityOptions opts) throws IOException {
         var raf = createFile();
-        try(var storage = BlockStorage.create(raf, password)) {
+        try(var storage = BlockStorage.create(raf, opts)) {
 
             for (int i = 0; i < 10; i++) {
                 storage.increase();
@@ -74,7 +72,7 @@ public class FileBlockStorageTest {
                 Assertions.assertEquals(i, buffer.getInt());
             }
 
-            try (var readStorage = BlockStorage.open(raf, password)) {
+            try (var readStorage = BlockStorage.open(raf, opts)) {
                 Assertions.assertEquals(storage.count(), readStorage.count());
                 for (int i = 0; i < 10; i++) {
                     var toRead = ByteBuffer.allocate(readStorage.BLOCK_SIZE);

@@ -13,6 +13,8 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class represents a block storage, block is defined as a collections of bytes that are
@@ -27,56 +29,35 @@ public interface BlockStorage extends Closeable {
 
     int BLOCK_SIZE = 4095;
 
-    static BlockStorage open(Path path) throws IOException {
+    static BlockStorage open(Path path, SecurityOptions opts) throws IOException {
         OpenOption[] options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
         SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new JamboBlksV1(channel, false, null);
+        return new JamboBlksV1(channel, false, createCipher(opts));
     }
 
-    static BlockStorage create(Path path) throws IOException {
-        OpenOption[] options;
-        if (Files.exists(path)) {
-            options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
+    static BlockStorage create(Path path, SecurityOptions opts) throws IOException {
+        List<OpenOption> ooLst = new ArrayList<>();
+        ooLst.add(StandardOpenOption.READ);
+        ooLst.add(StandardOpenOption.WRITE);
+        if (!Files.exists(path)) {
+            ooLst.add(StandardOpenOption.WRITE);
         }
-        else {
-            options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE};
-        }
-        SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new JamboBlksV1(channel, true, null);
+
+        var oo = ooLst.toArray(new OpenOption[0]);
+        var channel = Files.newByteChannel(path, oo);
+        return new JamboBlksV1(channel, true, createCipher(opts));
     }
 
-    static BlockStorage open(Path path, String password) throws IOException {
-        if(password == null || password.isEmpty()) {
-            return open(path);
+    static BlockCipher createCipher(SecurityOptions opts) throws IOException {
+        if(opts == null) {
+            return null;
         }
-        OpenOption[] options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
-        SeekableByteChannel channel = Files.newByteChannel(path, options);
+
         try {
-            return new JamboBlksV1(channel, false, new BlockCipher(password));
+            return new BlockCipher(opts);
         }
         catch (NoSuchAlgorithmException | InvalidKeySpecException | InvalidAlgorithmParameterException |
                InvalidKeyException | NoSuchPaddingException e) {
-            throw new IOException(e);
-        }
-    }
-
-    static BlockStorage create(Path path, String password) throws IOException {
-        if(password == null || password.isEmpty()) {
-            return create(path);
-        }
-        OpenOption[] options;
-        if (Files.exists(path)) {
-            options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
-        }
-        else {
-            options = new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE};
-        }
-        SeekableByteChannel channel = Files.newByteChannel(path, options);
-        try {
-            return new JamboBlksV1(channel, true, new BlockCipher(password));
-        }
-        catch (NoSuchAlgorithmException | InvalidKeySpecException | InvalidAlgorithmParameterException |
-                 InvalidKeyException | NoSuchPaddingException e) {
             throw new IOException(e);
         }
     }

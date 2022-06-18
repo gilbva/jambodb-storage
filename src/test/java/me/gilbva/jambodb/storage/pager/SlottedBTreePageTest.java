@@ -1,6 +1,5 @@
 package me.gilbva.jambodb.storage.pager;
 
-import me.gilbva.jambodb.storage.blocks.BlockStorage;
 import me.gilbva.jambodb.storage.types.IntegerSerializer;
 import me.gilbva.jambodb.storage.types.SmallStringSerializer;
 import org.junit.jupiter.api.Assertions;
@@ -28,7 +27,11 @@ public class SlottedBTreePageTest {
 
     public void testPage(boolean leaf) throws IOException {
         var tmpFile = Files.createTempFile("test", "jambodb");
-        var pager = FilePager.create(tmpFile, 10, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        var pager = FilePager
+                    .create(SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE)
+                    .file(tmpFile)
+                    .cachePages(10)
+                    .build();
         var page = SlottedBTreePage.create(pager, leaf);
         List<String> lst = new ArrayList<>();
         short usedBytes = 0;
@@ -61,7 +64,10 @@ public class SlottedBTreePageTest {
             }
         }
 
-        pager = FilePager.open(tmpFile, 10, SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE);
+        pager = FilePager
+                    .open(SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE)
+                    .file(tmpFile).cachePages(10)
+                    .build();
         page = SlottedBTreePage.open(pager, page.id());
         Assertions.assertFalse(page.isModified());
 
