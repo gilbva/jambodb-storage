@@ -88,11 +88,11 @@ class HeaderBlksV1 {
     /**
      * Reads the header from the given buffer.
      *
-     * @param data the buffer containen the data for the header.
+     * @param data the buffer containing the data for the header.
      */
     public void read(ByteBuffer data) {
-        int size = BlockStorage.BLOCK_SIZE - DATA_POS - digest.getDigestLength();
-        data.put(content.array(), DATA_POS, Math.min(size, data.remaining()));
+        int size = JamboBlksV1.BLOCK_SIZE - DATA_POS - digest.getDigestLength();
+        data.put(content.array(), DATA_POS, Math.min(size, data.capacity()));
         data.flip();
     }
 
@@ -103,7 +103,7 @@ class HeaderBlksV1 {
      * @throws IOException if the buffer provided does not have enough space
      */
     public void write(ByteBuffer data) throws IOException {
-        int size = BlockStorage.BLOCK_SIZE - DATA_POS - digest.getDigestLength();
+        int size = JamboBlksV1.BLOCK_SIZE - DATA_POS - digest.getDigestLength();
         if (data.remaining() > size) {
             throw new BufferOverflowException();
         }

@@ -26,6 +26,18 @@ public class FilePagerTest {
         }
         pager.fsync();
 
+        Assertions.assertEquals(1, pager.root());
+        Assertions.assertEquals(1, pager.page(1).id());
+        for (int i = 2; i < 100; i++) {
+            Assertions.assertEquals(i, pager.page(i).id());
+        }
+        pager.fsync();
+
+        pager = FilePager
+                .open(SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE)
+                .file(tmpFile).cachePages(10)
+                .build();
+        Assertions.assertEquals(1, pager.root());
         Assertions.assertEquals(1, pager.page(1).id());
         for (int i = 2; i < 100; i++) {
             Assertions.assertEquals(i, pager.page(i).id());

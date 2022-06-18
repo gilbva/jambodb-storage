@@ -105,7 +105,14 @@ public class BTreeTestBase {
         return lst;
     }
 
-    protected <K extends Comparable<K>, V> void removeAll(BTree<K, V> btree) throws IOException {
+    protected <K extends Comparable<K>, V> void assertSize(BTree<K, V> btree, int size) throws IOException {
+        var current = toList(btree.query(null, null))
+                .stream()
+                .map(BTreeEntry::key).collect(Collectors.toList());
+        Assertions.assertEquals(size, current.size());
+    }
+
+    protected <K extends Comparable<K>, V> void removeAll(BTree<K, V> btree, int size) throws IOException {
         var current = toList(btree.query(null, null))
                 .stream()
                 .map(BTreeEntry::key).collect(Collectors.toList());

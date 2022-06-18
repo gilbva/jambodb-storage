@@ -4,6 +4,7 @@ import me.gilbva.jambodb.storage.blocks.SecurityOptions;
 import me.gilbva.jambodb.storage.pager.FilePager;
 import me.gilbva.jambodb.storage.types.IntegerSerializer;
 import me.gilbva.jambodb.storage.types.SmallStringSerializer;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
@@ -55,9 +56,29 @@ public class BTreeFilePagerTest extends BTreeTestBase {
                 .file(intToStrFile).cachePages(cachePages).security(opts)
                 .build();
         performTest(size, strToIntPager, intToStrPager);
+        int strToIntRoot = strToIntPager.root();
+        int intToStrRoot = intToStrPager.root();
 
-        removeAll(new BTree<>(strToIntPager));
-        removeAll(new BTree<>(intToStrPager));
+        assertSize(new BTree<>(strToIntPager), size);
+        assertSize(new BTree<>(intToStrPager), size);
+
+        strToIntPager = FilePager
+                .open(SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE)
+                .file(strToIntFile).cachePages(cachePages).security(opts)
+                .build();
+        intToStrPager = FilePager
+                .open(IntegerSerializer.INSTANCE, SmallStringSerializer.INSTANCE)
+                .file(intToStrFile).cachePages(cachePages).security(opts)
+                .build();
+
+        Assertions.assertEquals(strToIntRoot, strToIntPager.root());
+        Assertions.assertEquals(intToStrRoot, intToStrPager.root());
+
+        assertSize(new BTree<>(strToIntPager), size);
+        assertSize(new BTree<>(intToStrPager), size);
+
+        removeAll(new BTree<>(strToIntPager), size);
+        removeAll(new BTree<>(intToStrPager), size);
 
         strToIntPager = FilePager
                 .open(SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE)
@@ -79,6 +100,9 @@ public class BTreeFilePagerTest extends BTreeTestBase {
 
         for (int i = 0; i < size; i++) {
             var str = UUID.randomUUID().toString().substring(0, 8);
+            while (expectedStiTree.containsKey(str)) {
+                str = UUID.randomUUID().toString().substring(0, 8);
+            }
 
             expectedStiTree.put(str, i);
             expectedItsTree.put(i, str);

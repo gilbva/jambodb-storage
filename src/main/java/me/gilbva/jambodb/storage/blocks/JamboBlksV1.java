@@ -1,10 +1,7 @@
 package me.gilbva.jambodb.storage.blocks;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
 
 /**
@@ -66,6 +63,7 @@ class JamboBlksV1 implements BlockStorage {
     @Override
     public void writeHead(ByteBuffer data) throws IOException {
         header.write(data);
+        header.write(channel);
     }
 
     @Override
