@@ -12,8 +12,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import javax.crypto.NoSuchPaddingException;
-
 public class FileBlockStorageTest {
     private static final Random random = new Random();
 
@@ -27,10 +25,10 @@ public class FileBlockStorageTest {
     public void testFileBlockStorage(SecurityOptions opts) throws IOException {
         var raf = createFile();
         try(var storage = BlockStorage.create(raf, opts)) {
-            Assertions.assertThrows(Exception.class, () -> storage.read(0, ByteBuffer.allocate(storage.BLOCK_SIZE)));
-            Assertions.assertThrows(Exception.class, () -> storage.write(0, ByteBuffer.allocate(storage.BLOCK_SIZE)));
+            Assertions.assertThrows(Exception.class, () -> storage.read(1, ByteBuffer.allocate(storage.BLOCK_SIZE)));
+            Assertions.assertThrows(Exception.class, () -> storage.write(1, ByteBuffer.allocate(storage.BLOCK_SIZE)));
             List<ByteBuffer> buffers = new ArrayList<>();
-            for (int i = 0; i < 100; i++) {
+            for (int i = 1; i <= 100; i++) {
                 var toWrite = randomBlock();
                 buffers.add(toWrite);
                 var toRead = ByteBuffer.allocate(storage.BLOCK_SIZE);
@@ -42,10 +40,10 @@ public class FileBlockStorageTest {
 
             try (var readStorage = BlockStorage.open(raf, opts)) {
                 Assertions.assertEquals(storage.count(), readStorage.count());
-                for (int i = 0; i < 100; i++) {
+                for (int i = 1; i <= 100; i++) {
                     var toRead = ByteBuffer.allocate(readStorage.BLOCK_SIZE);
                     readStorage.read(i, toRead);
-                    Assertions.assertArrayEquals(buffers.get(i).array(), toRead.array());
+                    Assertions.assertArrayEquals(buffers.get(i-1).array(), toRead.array());
                 }
             }
         }
@@ -60,9 +58,10 @@ public class FileBlockStorageTest {
 
     public void testFileBlockStorageWithIntValues(SecurityOptions opts) throws IOException {
         var raf = createFile();
+        int count = 0;
         try(var storage = BlockStorage.create(raf, opts)) {
 
-            for (int i = 0; i < 10; i++) {
+            for (int i = 1; i <= 10; i++) {
                 storage.increase();
                 ByteBuffer buffer = ByteBuffer.allocate(storage.BLOCK_SIZE);
                 buffer.putInt(i);
@@ -72,13 +71,15 @@ public class FileBlockStorageTest {
                 Assertions.assertEquals(i, buffer.getInt());
             }
 
-            try (var readStorage = BlockStorage.open(raf, opts)) {
-                Assertions.assertEquals(storage.count(), readStorage.count());
-                for (int i = 0; i < 10; i++) {
-                    var toRead = ByteBuffer.allocate(readStorage.BLOCK_SIZE);
-                    readStorage.read(i, toRead);
-                    Assertions.assertEquals(i, toRead.getInt());
-                }
+            count = storage.count();
+        }
+
+        try (var readStorage = BlockStorage.open(raf, opts)) {
+            Assertions.assertEquals(count, readStorage.count());
+            for (int i = 1; i <= 10; i++) {
+                var toRead = ByteBuffer.allocate(readStorage.BLOCK_SIZE);
+                readStorage.read(i, toRead);
+                Assertions.assertEquals(i, toRead.getInt());
             }
         }
     }

@@ -1,20 +1,9 @@
 package me.gilbva.jambodb.storage.blocks;
 
-import javax.crypto.NoSuchPaddingException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * This class represents a block storage, block is defined as a collections of bytes that are
@@ -29,37 +18,37 @@ public interface BlockStorage extends Closeable {
 
     int BLOCK_SIZE = 4095;
 
+    int HEAD_SIZE = BLOCK_SIZE - 20;
+
+    /**
+     * Opens the given file, as a block storage, if the file does not have a recognizable
+     * format, an I/O exception is thrown.
+     *
+     * @param path the file to open.
+     * @param opts the security options for the file, must be the same as the one used
+     *             when the file was created.
+     * @return An instance of this interface that can be used to access the blocks in the given file.
+     * @throws IOException If the file type is incorrect, or the security options provided are invalid.
+     */
     static BlockStorage open(Path path, SecurityOptions opts) throws IOException {
-        OpenOption[] options = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
-        SeekableByteChannel channel = Files.newByteChannel(path, options);
-        return new JamboBlksV1(channel, false, createCipher(opts));
+        var handler = new JamboBlksV1();
+        handler.open(path, opts);
+        return handler;
     }
 
+    /**
+     * Creates a new block storage in the file at the given path, that can be used to create, read and
+     * write blocks of data.
+     *
+     * @param path the path to create the block storage at.
+     * @param opts the security options for the new storage.
+     * @return An instance of this interface that can be used to access the blocks in the given file.
+     * @throws IOException If any I/O error occurs initializing the file.
+     */
     static BlockStorage create(Path path, SecurityOptions opts) throws IOException {
-        List<OpenOption> ooLst = new ArrayList<>();
-        ooLst.add(StandardOpenOption.READ);
-        ooLst.add(StandardOpenOption.WRITE);
-        if (!Files.exists(path)) {
-            ooLst.add(StandardOpenOption.WRITE);
-        }
-
-        var oo = ooLst.toArray(new OpenOption[0]);
-        var channel = Files.newByteChannel(path, oo);
-        return new JamboBlksV1(channel, true, createCipher(opts));
-    }
-
-    static BlockCipher createCipher(SecurityOptions opts) throws IOException {
-        if(opts == null) {
-            return null;
-        }
-
-        try {
-            return new BlockCipher(opts);
-        }
-        catch (NoSuchAlgorithmException | InvalidKeySpecException | InvalidAlgorithmParameterException |
-               InvalidKeyException | NoSuchPaddingException e) {
-            throw new IOException(e);
-        }
+        var handler = new JamboBlksV1();
+        handler.create(path, opts);
+        return handler;
     }
 
     /**
@@ -96,18 +85,18 @@ public interface BlockStorage extends Closeable {
     /**
      * This method reads the block at the given index, into the provided data buffer.
      *
-     * @param index The index of the block to read from.
+     * @param id The index of the block to read from.
      * @param data The buffer to place the data.
      * @throws IOException if any I/O exceptions occur reading to the underlying storage.
      */
-    void read(int index, ByteBuffer data) throws IOException;
+    void read(int id, ByteBuffer data) throws IOException;
 
     /**
      * This method reads the block at the given index, into the provided data buffer.
      *
-     * @param index The index of the block to write to.
+     * @param id The index of the block to write to.
      * @param data The buffer with the data to be written to the block.
      * @throws IOException if any I/O exceptions occur writing to the underlying storage.
      */
-    void write(int index, ByteBuffer data) throws IOException;
+    void write(int id, ByteBuffer data) throws IOException;
 }

@@ -103,13 +103,13 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
     }
 
     public void writeRoot() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(4);
+        ByteBuffer buffer = ByteBuffer.allocate(BlockStorage.HEAD_SIZE);
         buffer.putInt(root);
         storage.writeHead(buffer);
     }
 
     private int readRoot() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(4);
+        ByteBuffer buffer = ByteBuffer.allocate(BlockStorage.HEAD_SIZE);
         storage.readHead(buffer);
         return buffer.getInt();
     }

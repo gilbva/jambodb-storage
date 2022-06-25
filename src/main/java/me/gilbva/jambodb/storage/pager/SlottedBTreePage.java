@@ -68,7 +68,7 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
         this.valueSer = pager.getValueSer();
 
         this.buffer = ByteBuffer.allocate(BlockStorage.BLOCK_SIZE);
-        this.storage.read(id-1, this.buffer);
+        this.storage.read(id, this.buffer);
 
         short flags = buffer.getShort(FLAGS_POS);
         leaf = (flags & FLAG_IS_LEAF) != 0;
@@ -193,7 +193,7 @@ public class SlottedBTreePage<K, V> implements BTreePage<K, V> {
         buffer.putShort(AD_POINTER_POS, (short)adPointer);
         buffer.putShort(USED_BYTES_POS, (short)usedBytes);
         buffer.position(0);
-        storage.write(id-1, buffer);
+        storage.write(id, buffer);
         setModified(false);
     }
 
