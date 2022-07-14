@@ -22,7 +22,7 @@ public class LRUPagesCache<K, V> {
 
     private CacheEntry last;
 
-    private int maxSize;
+    private final int maxSize;
 
     public LRUPagesCache(int maxSize) {
         this.maxSize = maxSize;

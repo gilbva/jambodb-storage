@@ -19,12 +19,12 @@ public class MockPager<K, V> implements Pager<BTreePage<K, V>> {
     }
 
     @Override
-    public int root() {
+    public int root(int index) {
         return root;
     }
 
     @Override
-    public void root(int id) {
+    public void root(int index, int id) {
         root = id;
     }
 

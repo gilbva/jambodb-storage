@@ -126,17 +126,23 @@ public final class BTree<K extends Comparable<K>, V> {
     int root;
 
     /**
+     * Index for the pager of this BTree
+     */
+    int index;
+
+    /**
      * The constructor builds a BTree instance for the given page storage.
      *
      * @param pager The object responsible for storing the pages managed by this tree.
      * @throws IOException Thrown by the underlying storage.
      */
-    public BTree(Pager<BTreePage<K, V>> pager) throws IOException {
+    public BTree(Pager<BTreePage<K, V>> pager, int index) throws IOException {
         this.pager = pager;
-        this.root = pager.root();
+        this.index = index;
+        this.root = pager.root(index);
         if (this.root <= 0) {
             this.root = pager.create(true).id();
-            pager.root(this.root);
+            pager.root(index, root);
         }
     }
 
@@ -560,7 +566,7 @@ public final class BTree<K extends Comparable<K>, V> {
         var newRoot = pager.create(false);
         newRoot.child(0, root);
         root = newRoot.id();
-        pager.root(root);
+        pager.root(index, root);
         return new Node<>(newRoot, 0);
     }
 
@@ -573,7 +579,7 @@ public final class BTree<K extends Comparable<K>, V> {
         var oldRoot = pager.page(root);
         if (oldRoot.size() == 0 && !oldRoot.isLeaf()) {
             root = oldRoot.child(0);
-            pager.root(root);
+            pager.root(index, root);
             pager.remove(oldRoot.id());
         }
     }

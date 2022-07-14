@@ -25,7 +25,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     private final BlockStorage storage;
 
-    private int root;
+    private ByteBuffer roots;
 
     private final Serializer<K> keySer;
 
@@ -36,26 +36,25 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         this.valueSer = opts.valueSerializer();
         this.cache = new LRUPagesCache<>(opts.cachePages());
         this.txPages = new HashMap<>();
+        this.roots = ByteBuffer.allocate(BlockStorage.HEAD_SIZE);
 
         if(opts.init()) {
             storage = BlockStorage.create(opts.file(), opts.security());
-            root = create(true).id();
-            writeRoot();
         }
         else {
             storage = BlockStorage.open(opts.file(), opts.security());
-            root = readRoot();
+            readRoots();
         }
     }
 
     @Override
-    public int root() {
-        return root;
+    public int root(int index) {
+        return roots.getInt(index * 4);
     }
 
     @Override
-    public void root(int id) {
-        root = id;
+    public void root(int index, int id) {
+        roots.putInt(index * 4, id);
     }
 
     @Override
@@ -92,7 +91,7 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
 
     @Override
     public void fsync() throws IOException {
-        writeRoot();
+        writeRoots();
         for (var page : txPages.values()) {
             if(page.isModified()) {
                 page.save();
@@ -102,16 +101,12 @@ public class FilePager<K, V> implements Pager<BTreePage<K, V>> {
         txPages.clear();
     }
 
-    public void writeRoot() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(BlockStorage.HEAD_SIZE);
-        buffer.putInt(root);
-        storage.writeHead(buffer);
+    public void writeRoots() throws IOException {
+        storage.writeHead(roots);
     }
 
-    private int readRoot() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(BlockStorage.HEAD_SIZE);
-        storage.readHead(buffer);
-        return buffer.getInt();
+    private void readRoots() throws IOException {
+        storage.readHead(roots);
     }
 
     public Serializer<K> getKeySer() {

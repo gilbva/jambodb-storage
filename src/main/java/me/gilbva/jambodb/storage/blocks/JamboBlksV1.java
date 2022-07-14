@@ -4,13 +4,11 @@ import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -25,13 +23,13 @@ class JamboBlksV1 implements BlockStorage {
 
     private static final int BLOCK_DATA_SIZE = BLOCK_REAL_SIZE - 1;
 
-    private static int INIT_DATA_SIZE = 16;
+    private static final int INIT_DATA_SIZE = 16;
 
-    private static int HEAD_REAL_SIZE = BLOCK_REAL_SIZE - INIT_DATA_SIZE;
+    private static final int HEAD_REAL_SIZE = BLOCK_REAL_SIZE - INIT_DATA_SIZE;
 
-    private static int HEAD_DATA_SIZE = HEAD_REAL_SIZE - 1;
+    private static final int HEAD_DATA_SIZE = HEAD_REAL_SIZE - 1;
 
-    private static int HEAD_USER_DATA_SIZE = HEAD_DATA_SIZE - 4;
+    private static final int HEAD_USER_DATA_SIZE = HEAD_DATA_SIZE - 4;
 
     private static final byte[] TITLE = "JamboBlks".getBytes(StandardCharsets.UTF_8);
 
@@ -63,8 +61,8 @@ class JamboBlksV1 implements BlockStorage {
     }
 
     @Override
-    public void readHead(ByteBuffer data) throws IOException {
-        if(data.capacity() > HEAD_USER_DATA_SIZE) {
+    public void readHead(ByteBuffer data) {
+        if(data.capacity() != HEAD_USER_DATA_SIZE) {
             throw new IllegalArgumentException("invalid data size");
         }
 
@@ -80,7 +78,7 @@ class JamboBlksV1 implements BlockStorage {
 
     @Override
     public void writeHead(ByteBuffer data) throws IOException {
-        if(data.capacity() > HEAD_USER_DATA_SIZE) {
+        if(data.capacity() != HEAD_USER_DATA_SIZE) {
             throw new IllegalArgumentException("invalid data size");
         }
 

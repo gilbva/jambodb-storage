@@ -56,11 +56,11 @@ public class BTreeFilePagerTest extends BTreeTestBase {
                 .file(intToStrFile).cachePages(cachePages).security(opts)
                 .build();
         performTest(size, strToIntPager, intToStrPager);
-        int strToIntRoot = strToIntPager.root();
-        int intToStrRoot = intToStrPager.root();
+        int strToIntRoot = strToIntPager.root(0);
+        int intToStrRoot = intToStrPager.root(0);
 
-        assertSize(new BTree<>(strToIntPager), size);
-        assertSize(new BTree<>(intToStrPager), size);
+        assertSize(new BTree<>(strToIntPager, 0), size);
+        assertSize(new BTree<>(intToStrPager, 0), size);
 
         strToIntPager = FilePager
                 .open(SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE)
@@ -71,14 +71,14 @@ public class BTreeFilePagerTest extends BTreeTestBase {
                 .file(intToStrFile).cachePages(cachePages).security(opts)
                 .build();
 
-        Assertions.assertEquals(strToIntRoot, strToIntPager.root());
-        Assertions.assertEquals(intToStrRoot, intToStrPager.root());
+        Assertions.assertEquals(strToIntRoot, strToIntPager.root(0));
+        Assertions.assertEquals(intToStrRoot, intToStrPager.root(0));
 
-        assertSize(new BTree<>(strToIntPager), size);
-        assertSize(new BTree<>(intToStrPager), size);
+        assertSize(new BTree<>(strToIntPager, 0), size);
+        assertSize(new BTree<>(intToStrPager, 0), size);
 
-        removeAll(new BTree<>(strToIntPager), size);
-        removeAll(new BTree<>(intToStrPager), size);
+        removeAll(new BTree<>(strToIntPager, 0), size);
+        removeAll(new BTree<>(intToStrPager, 0), size);
 
         strToIntPager = FilePager
                 .open(SmallStringSerializer.INSTANCE, IntegerSerializer.INSTANCE)
@@ -95,8 +95,8 @@ public class BTreeFilePagerTest extends BTreeTestBase {
         var expectedStiTree = new TreeMap<String, Integer>();
         var expectedItsTree = new TreeMap<Integer, String>();
 
-        var strToInt = new BTree<>(strToIntPager);
-        var intToStr = new BTree<>(intToStrPager);
+        var strToInt = new BTree<>(strToIntPager, 0);
+        var intToStr = new BTree<>(intToStrPager, 0);
 
         for (int i = 0; i < size; i++) {
             var str = UUID.randomUUID().toString().substring(0, 8);

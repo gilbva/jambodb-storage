@@ -31,7 +31,7 @@ public class BTreeUnitTest {
 
     public void testSearch(int size) throws IOException {
         MockPager<Integer, Integer> pager = new MockPager<>(size);
-        BTree<Integer, Integer> btree = new BTree<>(pager);
+        BTree<Integer, Integer> btree = new BTree<>(pager, 0);
 
         int[] keys = getOrderedRandomKeys(size);
         var page = fillWithKeys(pager.create(false), keys);
@@ -52,17 +52,17 @@ public class BTreeUnitTest {
     @Test
     public void testGrowShrink() throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(3);
-        BTree<String, Integer> btree = new BTree<>(pager);
+        BTree<String, Integer> btree = new BTree<>(pager, 0);
 
         var rootId = btree.root;
         btree.grow();
         Assertions.assertNotEquals(rootId, btree.root);
-        Assertions.assertEquals(pager.root(), btree.root);
+        Assertions.assertEquals(pager.root(0), btree.root);
         assertEquals(rootId, pager.page(btree.root).child(0));
 
         btree.shrink();
         Assertions.assertEquals(rootId, btree.root);
-        Assertions.assertEquals(pager.root(), btree.root);
+        Assertions.assertEquals(pager.root(0), btree.root);
     }
 
     @TestFactory
@@ -81,7 +81,7 @@ public class BTreeUnitTest {
 
     public void testBorrow(int size, int index, boolean borrowRight) throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(size * 2);
-        BTree<String, Integer> btree = new BTree<>(pager);
+        BTree<String, Integer> btree = new BTree<>(pager, 0);
 
         var parent = fillWithDummyData(pager.create(false), size);
         var rightPage = fillWithDummyData(pager.create(false), size);
@@ -161,7 +161,7 @@ public class BTreeUnitTest {
 
     public void testMerge(int size, int index, boolean mergeRight) throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(size * 2);
-        BTree<String, Integer> btree = new BTree<>(pager);
+        BTree<String, Integer> btree = new BTree<>(pager, 0);
 
         var parent = fillWithDummyData(pager.create(false), size);
         var rightPage = fillWithDummyData(pager.create(false), size);
@@ -213,7 +213,7 @@ public class BTreeUnitTest {
 
     public void testMove(int size) throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(size);
-        BTree<String, Integer> btree = new BTree<>(pager);
+        BTree<String, Integer> btree = new BTree<>(pager, 0);
 
         var source = fillWithDummyData(pager.create(false), size);
         var target = fillWithDummyData(pager.create(false), 0);
@@ -261,7 +261,7 @@ public class BTreeUnitTest {
     @Test
     public void testPromoteLast() throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(3);
-        BTree<String, Integer> btree = new BTree<>(pager);
+        BTree<String, Integer> btree = new BTree<>(pager, 0);
 
         var parent = pager.create(false);
         var source = pager.create(false);
@@ -291,7 +291,7 @@ public class BTreeUnitTest {
     @Test
     public void testRotations() throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(3);
-        BTree<String, Integer> btree = new BTree<>(pager);
+        BTree<String, Integer> btree = new BTree<>(pager, 0);
 
         var parent = pager.create(false);
         var source = pager.create(false);
@@ -351,7 +351,7 @@ public class BTreeUnitTest {
 
     public void testInsertPlace(int size) throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(size);
-        BTree<String, Integer> btree = new BTree<>(pager);
+        BTree<String, Integer> btree = new BTree<>(pager, 0);
 
         var expectedKeys = new ArrayList<>(size);
         var expectedValues = new ArrayList<>(size);
@@ -395,7 +395,7 @@ public class BTreeUnitTest {
 
     public void testDeletePlace(int size) throws IOException {
         MockPager<String, Integer> pager = new MockPager<>(26);
-        BTree<String, Integer> btree = new BTree<>(pager);
+        BTree<String, Integer> btree = new BTree<>(pager, 0);
 
         var expectedKeys = new ArrayList<>(size);
         var expectedValues = new ArrayList<>(size);
@@ -431,7 +431,7 @@ public class BTreeUnitTest {
     @Test
     public void testGetChildPage() throws IOException {
         Pager<BTreePage<String, Object>> pager = new MockPager<>(3);
-        BTree<String, Object> btree = new BTree<>(pager);
+        BTree<String, Object> btree = new BTree<>(pager, 0);
 
         var leafPage = pager.create(true);
         leafPage.size(1);

@@ -12,18 +12,20 @@ public interface Pager<P> {
     /**
      * Gets the current root page saved in this repository.
      *
+     * @param index the index of the BTree for this file.
      * @return the numeric id of the root page.
      * @throws IOException if any I/O exception occurs accessing the underlying external memory.
      */
-    int root() throws IOException;
+    int root(int index) throws IOException;
 
     /**
      * Sets the id of root page
      *
+     * @param index the index of the BTree for this file.
      * @param id the numeric id of the root page.
      * @throws IOException if any I/O exception occurs accessing the underlying external memory.
      */
-    void root(int id) throws IOException;
+    void root(int index, int id) throws IOException;
 
     /**
      * Gets the page by the given id. this method will load the page from disk if necessary.

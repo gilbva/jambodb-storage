@@ -33,8 +33,8 @@ public class BTreeMemPagerTest extends BTreeTestBase {
         var expectedStiTree = new TreeMap<String, Integer>();
         var expectedItsTree = new TreeMap<Integer, String>();
 
-        var strToInt = new BTree<>(new MockPager<String, Integer>(md));
-        var intToStr = new BTree<>(new MockPager<Integer, String>(md));
+        var strToInt = new BTree<>(new MockPager<String, Integer>(md), 0);
+        var intToStr = new BTree<>(new MockPager<Integer, String>(md), 0);
 
         for (int i = 0; i < size; i++) {
             var str = UUID.randomUUID().toString().substring(0, 8);
